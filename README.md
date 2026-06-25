@@ -339,3 +339,5 @@ See `.env.example` for all settings. Key ones:
 - Mount `/app/.cache/huggingface` as a persistent volume to avoid re-downloading the model on every deployment.
 - Restrict `CORS allow_origins` to the backend's IP/domain in production.
 - The `/docs` and `/redoc` endpoints can be disabled by setting `docs_url=None` in `main.py` for production.
+=======
+
