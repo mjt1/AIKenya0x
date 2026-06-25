@@ -1,0 +1,22 @@
+// One CREATE CONSTRAINT per line. Safe to rerun (IF NOT EXISTS).
+export const CONSTRAINTS: string[] = [
+  'CREATE CONSTRAINT agent_id_unique IF NOT EXISTS FOR (a:Agent) REQUIRE a.id IS UNIQUE',
+  'CREATE CONSTRAINT agent_email_unique IF NOT EXISTS FOR (a:Agent) REQUIRE a.email IS UNIQUE',
+  'CREATE CONSTRAINT cooperative_id_unique IF NOT EXISTS FOR (c:Cooperative) REQUIRE c.id IS UNIQUE',
+  'CREATE CONSTRAINT cooperative_name_unique IF NOT EXISTS FOR (c:Cooperative) REQUIRE c.name IS UNIQUE',
+  'CREATE CONSTRAINT farmer_id_unique IF NOT EXISTS FOR (f:Farmer) REQUIRE f.id IS UNIQUE',
+  'CREATE CONSTRAINT enterprise_id_unique IF NOT EXISTS FOR (e:Enterprise) REQUIRE e.id IS UNIQUE',
+  'CREATE CONSTRAINT animal_id_unique IF NOT EXISTS FOR (a:Animal) REQUIRE a.id IS UNIQUE',
+  'CREATE CONSTRAINT field_id_unique IF NOT EXISTS FOR (f:Field) REQUIRE f.id IS UNIQUE',
+  'CREATE CONSTRAINT visit_id_unique IF NOT EXISTS FOR (v:Visit) REQUIRE v.id IS UNIQUE',
+  'CREATE CONSTRAINT observation_id_unique IF NOT EXISTS FOR (o:Observation) REQUIRE o.id IS UNIQUE',
+  'CREATE CONSTRAINT sync_op_id_unique IF NOT EXISTS FOR (s:SyncOp) REQUIRE s.id IS UNIQUE',
+  'CREATE CONSTRAINT recommendation_id_unique IF NOT EXISTS FOR (r:Recommendation) REQUIRE r.id IS UNIQUE',
+  'CREATE INDEX agent_role IF NOT EXISTS FOR (a:Agent) ON (a.role)',
+  'CREATE INDEX farmer_updated_at IF NOT EXISTS FOR (f:Farmer) ON (f.updatedAt)',
+  'CREATE INDEX enterprise_updated_at IF NOT EXISTS FOR (e:Enterprise) ON (e.updatedAt)',
+  'CREATE INDEX visit_updated_at IF NOT EXISTS FOR (v:Visit) ON (v.updatedAt)',
+  'CREATE INDEX observation_updated_at IF NOT EXISTS FOR (o:Observation) ON (o.updatedAt)',
+  'CREATE INDEX recommendation_status IF NOT EXISTS FOR (r:Recommendation) ON (r.status)',
+  'CREATE INDEX recommendation_dedupe IF NOT EXISTS FOR (r:Recommendation) ON (r.dedupeKey)',
+];

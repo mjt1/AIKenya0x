@@ -1,0 +1,977 @@
+{
+  "info": {
+    "name": "Suluhu Backend",
+    "_postman_id": "30fbdf96-33e1-4937-925f-80fe837de13a",
+    "description": "All Suluhu backend endpoints with sample data from test-endpoints.md. Set `baseUrl` (default http://localhost:3000/api), then run Auth > Login to auto-populate {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "agentId",
+      "value": ""
+    },
+    {
+      "key": "farmerId",
+      "value": ""
+    },
+    {
+      "key": "enterpriseId",
+      "value": ""
+    },
+    {
+      "key": "visitId",
+      "value": "8e3e6e74-2f5a-4d3c-9a23-1234567890ab"
+    },
+    {
+      "key": "recoId",
+      "value": ""
+    },
+    {
+      "key": "coopId",
+      "value": ""
+    },
+    {
+      "key": "docId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new extension agent. Returns JWT + agent profile.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Asha Wanjiru\",\n  \"email\": \"asha@digicow.co.ke\",\n  \"password\": \"changeme123\",\n  \"county\": \"Kakamega\",\n  \"cooperative\": \"Mumias Sugar Cooperative\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.token) pm.collectionVariables.set('token', json.token);",
+                  "  if (json.agent && json.agent.id) pm.collectionVariables.set('agentId', json.agent.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Exchange credentials for a JWT. Captures {{token}} automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"asha@digicow.co.ke\",\n  \"password\": \"changeme123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.token) pm.collectionVariables.set('token', json.token);",
+                  "  if (json.agent && json.agent.id) pm.collectionVariables.set('agentId', json.agent.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Current agent profile + caseload size."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "List agents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get agent",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update agent role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}", "role"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"supervisor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cooperatives",
+      "item": [
+        {
+          "name": "List cooperatives",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cooperatives",
+              "host": ["{{baseUrl}}"],
+              "path": ["cooperatives"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create cooperative",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cooperatives",
+              "host": ["{{baseUrl}}"],
+              "path": ["cooperatives"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kakamega Dairy Hub\",\n  \"county\": \"Kakamega\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List coop agents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cooperatives/{{coopId}}/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["cooperatives", "{{coopId}}", "agents"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farmers",
+      "item": [
+        {
+          "name": "Create farmer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers"]
+            },
+            "description": "Register farmer with enterprises (dairy + sugarcane).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Otieno\",\n  \"phone\": \"+254700000000\",\n  \"gps\": \"0.2827,34.7519\",\n  \"enterprises\": [\n    {\n      \"type\": \"Dairy\",\n      \"animals\": [\n        {\n          \"breed\": \"Friesian\",\n          \"lactationStage\": \"mid\",\n          \"lastBreedingDate\": \"2026-03-01\"\n        }\n      ]\n    },\n    {\n      \"type\": \"Sugarcane\",\n      \"fields\": [\n        {\n          \"areaHa\": 1.5,\n          \"variety\": \"CO421\",\n          \"ratoonCycle\": 2,\n          \"plantingDate\": \"2025-04-10\",\n          \"lastTopDressedAt\": \"2026-01-15\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.id) pm.collectionVariables.set('farmerId', j.id);",
+                  "  if (j.enterprises && j.enterprises[0] && j.enterprises[0].id) pm.collectionVariables.set('enterpriseId', j.enterprises[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List farmers (caseload)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/farmers",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get farmer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update farmer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John O. Otieno\",\n  \"phone\": \"+254711111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add enterprise",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}/enterprises",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}", "enterprises"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Dairy\",\n  \"animals\": [\n    {\n      \"breed\": \"Ayrshire\",\n      \"lactationStage\": \"early\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reassign farmer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}/reassign",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}", "reassign"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toAgentId\": \"{{agentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Visits",
+      "item": [
+        {
+          "name": "Create visit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}/visits",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}", "visits"]
+            },
+            "description": "Idempotent on visitId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitId\": \"{{visitId}}\",\n  \"date\": \"2026-06-24T08:30:00Z\",\n  \"enterpriseIds\": [\n    \"{{enterpriseId}}\"\n  ],\n  \"notes\": \"Cow off feed for 2 days; milk yield down ~20%.\",\n  \"observations\": [\n    {\n      \"kind\": \"issue\",\n      \"text\": \"Suspected mastitis on rear-left quarter\"\n    },\n    {\n      \"kind\": \"advice\",\n      \"text\": \"Strip-test and start broad-spectrum antibiotic if positive\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j.id) pm.collectionVariables.set('visitId', j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List farmer visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/farmers/{{farmerId}}/visits",
+              "host": ["{{baseUrl}}"],
+              "path": ["farmers", "{{farmerId}}", "visits"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get visit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/visits/{{visitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", "{{visitId}}"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "List recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations?status=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); const arr = Array.isArray(j) ? j : j.items; if (arr && arr[0] && arr[0].id) pm.collectionVariables.set('recoId', arr[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate recommendations",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "generate"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update reco status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/{{recoId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "{{recoId}}", "status"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "overview"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Visit cadence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/visit-cadence?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "visit-cadence"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Observation trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/observation-trends?days=90",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "observation-trends"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "90"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Farmer health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/farmer-health",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "farmer-health"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sync",
+      "item": [
+        {
+          "name": "Push",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sync/push",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "push"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operations\": [\n    {\n      \"clientId\": \"11111111-1111-1111-1111-111111111111\",\n      \"kind\": \"visit.create\",\n      \"clientUpdatedAt\": \"2026-06-24T08:30:00Z\",\n      \"farmerId\": \"{{farmerId}}\",\n      \"payload\": {\n        \"enterpriseIds\": [\n          \"{{enterpriseId}}\"\n        ],\n        \"notes\": \"Routine check; no issues.\",\n        \"observations\": [\n          {\n            \"kind\": \"observation\",\n            \"text\": \"Body condition score 3\"\n          }\n        ]\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Pull",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/pull?since=2026-06-20T00:00:00.000Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "pull"],
+              "query": [
+                {
+                  "key": "since",
+                  "value": "2026-06-20T00:00:00.000Z"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "status"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Advisory (GraphRAG)",
+      "item": [
+        {
+          "name": "Ask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/advisory/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["advisory", "ask"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What should I do for a Friesian cow with low milk yield and signs of mastitis?\",\n  \"farmerId\": \"{{farmerId}}\",\n  \"enterprise\": \"dairy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin / Agents",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "agents"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "agents"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Peter Mwangi\",\n  \"email\": \"peter@digicow.co.ke\",\n  \"password\": \"changeme123\",\n  \"county\": \"Kakamega\",\n  \"cooperative\": \"Mumias Sugar Cooperative\",\n  \"role\": \"supervisor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "agents", "{{agentId}}"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/agents/{{agentId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "agents", "{{agentId}}", "role"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"agent\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update cooperative",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/agents/{{agentId}}/cooperative",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "agents", "{{agentId}}", "cooperative"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cooperative\": \"Kakamega Dairy Hub\",\n  \"county\": \"Kakamega\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin / Knowledge Base",
+      "item": [
+        {
+          "name": "Upload document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/kb/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "kb", "documents"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"KALRO Sugarcane Manual \\u2014 Chapter 4 Fertilisation\",\n  \"source\": \"KALRO Sugarcane Manual, 2019\",\n  \"enterprise\": \"sugarcane\",\n  \"text\": \"Top-dressing with CAN should occur 8 to 12 weeks after planting once weed control is complete. Apply 200 kg/ha split into two doses...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j.id) pm.collectionVariables.set('docId', j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/kb/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "kb", "documents"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "List chunks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/kb/documents/{{docId}}/chunks",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "kb", "documents", "{{docId}}", "chunks"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/kb/documents/{{docId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "kb", "documents", "{{docId}}"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin / Platform Analytics",
+      "item": [
+        {
+          "name": "Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/analytics/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "analytics", "overview"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Agents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/analytics/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "analytics", "agents"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Demand",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/analytics/demand",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "analytics", "demand"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}
