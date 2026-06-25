@@ -136,6 +136,7 @@ export class RecommendationsRepository {
            rationale: item.rationale,
            priority: item.priority,
            status: 'pending',
+           note: null,
            dedupeKey: item.dedupeKey,
            context: item.context,
            createdAt: datetime(),
@@ -171,12 +172,15 @@ export class RecommendationsRepository {
     agentId: string,
     recommendationId: string,
     status: RecommendationStatus,
+    note?: string,
   ): Promise<Recommendation | null> {
     const records = await this.neo4j.write(
       `MATCH (:Agent {id: $agentId})-[:HAS_RECOMMENDATION]->(r:Recommendation {id: $recommendationId})-[:ABOUT]->(f:Farmer)
-       SET r.status = $status, r.updatedAt = datetime()
+       SET r.status = $status,
+           r.note = coalesce($note, r.note),
+           r.updatedAt = datetime()
        RETURN r, f`,
-      { agentId, recommendationId, status },
+      { agentId, recommendationId, status, note: note ?? null },
     );
     if (records.length === 0) return null;
     return this.rowToRecommendation(records[0].get('r').properties, records[0].get('f').properties);
@@ -193,6 +197,7 @@ export class RecommendationsRepository {
       rationale: (rProps.rationale as string) ?? '',
       priority: toNum(rProps.priority),
       status: rProps.status as RecommendationStatus,
+      note: (rProps.note as string) ?? null,
       dedupeKey: rProps.dedupeKey as string,
       createdAt: rProps.createdAt?.toString?.() ?? '',
       updatedAt: rProps.updatedAt?.toString?.() ?? '',

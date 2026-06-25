@@ -6,8 +6,6 @@ export interface AgentRecord {
   email: string;
   passwordHash: string;
   county: string;
-  cooperative: string;
-  cooperativeId: string | null;
   role: Role;
 }
 

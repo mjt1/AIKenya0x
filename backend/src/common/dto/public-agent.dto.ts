@@ -6,8 +6,6 @@ export class PublicAgentDto {
   @ApiProperty() name!: string;
   @ApiProperty({ format: 'email' }) email!: string;
   @ApiProperty({ example: 'Kakamega' }) county!: string;
-  @ApiProperty({ example: 'Mumias West Cooperative' }) cooperative!: string;
-  @ApiProperty({ nullable: true, type: String }) cooperativeId!: string | null;
   @ApiProperty({ enum: Role }) role!: Role;
 }
 

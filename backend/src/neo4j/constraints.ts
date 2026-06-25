@@ -2,8 +2,6 @@
 export const CONSTRAINTS: string[] = [
   'CREATE CONSTRAINT agent_id_unique IF NOT EXISTS FOR (a:Agent) REQUIRE a.id IS UNIQUE',
   'CREATE CONSTRAINT agent_email_unique IF NOT EXISTS FOR (a:Agent) REQUIRE a.email IS UNIQUE',
-  'CREATE CONSTRAINT cooperative_id_unique IF NOT EXISTS FOR (c:Cooperative) REQUIRE c.id IS UNIQUE',
-  'CREATE CONSTRAINT cooperative_name_unique IF NOT EXISTS FOR (c:Cooperative) REQUIRE c.name IS UNIQUE',
   'CREATE CONSTRAINT farmer_id_unique IF NOT EXISTS FOR (f:Farmer) REQUIRE f.id IS UNIQUE',
   'CREATE CONSTRAINT enterprise_id_unique IF NOT EXISTS FOR (e:Enterprise) REQUIRE e.id IS UNIQUE',
   'CREATE CONSTRAINT animal_id_unique IF NOT EXISTS FOR (a:Animal) REQUIRE a.id IS UNIQUE',

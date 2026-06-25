@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Suluhu · Farmer Intelligence</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background:#f6f8fc; color:#0b1a2f; }
+    :root { --surface: #ffffff; --surface-2: #f1f5f9; --surface-3: #e9eef4; --ink: #0b1a2f; --ink-2: #2a3b4f; --border: #dce2ec; --green: #0f7b4b; --green-light: #dcf5eb; --amber: #b45309; --red: #b91c1c; --blue: #1e4b8a; }
+
+    .topbar { display:flex; align-items:center; gap:1.25rem; padding:.6rem 1.5rem; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .topbar-logo { display:flex; align-items:center; gap:.5rem; font-weight:700; font-size:1.3rem; }
+    .dot { width:12px; height:12px; background:var(--green); border-radius:50%; }
+    .logo-text em { font-style:normal; color:var(--green); }
+    .search-wrap { flex:1; min-width:180px; position:relative; display:flex; align-items:center; background:var(--surface-2); border-radius:40px; padding:0 .75rem; }
+    .search-icon { color:#6b7a8f; }
+    #searchInput { border:none; background:transparent; padding:.65rem .5rem; width:100%; outline:none; font-size:.9rem; }
+    .autocomplete-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:white; border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.12); display:none; max-height:240px; overflow-y:auto; z-index:40; }
+    .topbar-actions { display:flex; gap:.5rem; align-items:center; }
+    .btn-ghost { background:transparent; border:1px solid transparent; padding:.4rem .8rem; border-radius:30px; font-weight:500; color:var(--ink-2); display:flex; align-items:center; gap:.3rem; cursor:pointer; transition:.2s; }
+    .btn-ghost:hover { background:var(--surface-2); border-color:var(--border); }
+    .hide-sm { display:none; } @media(min-width:640px){ .hide-sm { display:inline; } }
+    .mobile-map-toggle { display:flex; } @media(min-width:768px){ .mobile-map-toggle { display:none; } }
+
+    .filter-bar { display:flex; gap:.4rem; padding:.5rem 1.5rem; background:white; border-bottom:1px solid var(--border); flex-wrap:wrap; align-items:center; }
+    .filter-chip { background:var(--surface-2); border:1px solid transparent; padding:.3rem .9rem; border-radius:40px; font-size:.8rem; font-weight:500; color:var(--ink-2); cursor:pointer; transition:.2s; display:inline-flex; align-items:center; gap:.3rem; }
+    .filter-chip.active { background:var(--green); color:white; border-color:var(--green); }
+    .filter-sep { width:1px; height:24px; background:var(--border); margin:0 .2rem; }
+
+    .archetype-bar { display:flex; gap:.4rem; padding:.4rem 1.5rem .8rem 1.5rem; background:white; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .arch-chip { border-radius:40px; padding:.25rem .9rem; font-size:.78rem; font-weight:500; border:1px solid transparent; cursor:pointer; transition:.2s; }
+    .arch-chip.active { border-color:var(--green); background:var(--green-light) !important; color:var(--green) !important; }
+
+    .app-body { display:flex; height:calc(100vh - 150px); }
+    .left-panel { width:42%; min-width:340px; background:white; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+    .panel-header { padding:.8rem 1rem; border-bottom:1px solid var(--border); }
+    .panel-stats { display:flex; gap:1rem; margin-bottom:.5rem; flex-wrap:wrap; }
+    .pstat { display:flex; align-items:baseline; gap:.2rem; font-size:.8rem; color:var(--ink-2); }
+    .pstat-num { font-weight:700; font-size:1.1rem; color:var(--ink); }
+    .sort-row { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.4rem; }
+    #sortSelect { padding:.2rem .6rem; border-radius:40px; border:1px solid var(--border); background:white; font-size:.78rem; }
+    .results-count { font-size:.78rem; color:var(--ink-2); }
+
+    .areas-list { flex:1; overflow-y:auto; padding:.5rem .5rem 1rem .5rem; }
+    .area-item { display:flex; justify-content:space-between; align-items:center; padding:.6rem .8rem; border-radius:12px; margin-bottom:.3rem; background:white; border:1px solid transparent; transition:.2s; cursor:pointer; }
+    .area-item:hover { background:var(--surface-2); border-color:var(--border); }
+    .area-name { font-weight:600; font-size:.9rem; }
+    .area-score { font-weight:700; font-size:.95rem; background:var(--surface-2); padding:.1rem .6rem; border-radius:40px; }
+    .area-tag { font-size:.65rem; background:var(--surface-3); padding:.1rem .5rem; border-radius:40px; margin-left:.3rem; }
+
+    .map-panel { flex:1; position:relative; background:#eef2f7; }
+    #map { height:100%; width:100%; }
+    .map-overlay-top { position:absolute; top:12px; left:12px; background:rgba(255,255,255,.92); padding:.3rem 1rem; border-radius:40px; font-weight:600; font-size:.85rem; box-shadow:0 2px 8px rgba(0,0,0,.08); z-index:500; }
+    .map-legend { position:absolute; bottom:20px; right:20px; background:rgba(255,255,255,.94); padding:.6rem 1rem; border-radius:12px; font-size:.75rem; box-shadow:0 2px 10px rgba(0,0,0,.06); z-index:500; }
+    .legend-row { display:flex; align-items:center; gap:.4rem; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; }
+    .mobile-back-btn { display:none; position:absolute; bottom:80px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); padding:.4rem 1.2rem; border-radius:40px; font-weight:500; box-shadow:0 4px 12px rgba(0,0,0,.1); z-index:500; }
+    .heatmap-legend { position:absolute; bottom:20px; left:20px; background:rgba(255,255,255,.94); padding:.6rem 1rem; border-radius:12px; font-size:.75rem; box-shadow:0 2px 10px rgba(0,0,0,.06); z-index:500; display:none; }
+    .heatmap-legend .gradient { width:120px; height:12px; background:linear-gradient(to right, blue, cyan, lime, yellow, red); border-radius:4px; margin:4px 0; }
+
+    @media(max-width:768px) {
+      .app-body { flex-direction:column; height:auto; }
+      .left-panel { width:100%; min-width:auto; border-right:none; max-height:50vh; }
+      .map-panel { height:60vh; }
+      .mobile-back-btn { display:flex; }
+    }
+
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:500; }
+    .modal { background:white; width:90%; max-width:720px; max-height:90vh; border-radius:24px; overflow-y:auto; padding:1.2rem 1.5rem; position:relative; }
+    .modal-header { margin-bottom:1rem; }
+    .modal-close { position:absolute; right:16px; top:16px; background:var(--surface-2); border:none; border-radius:50%; width:32px; height:32px; font-size:1.2rem; cursor:pointer; }
+    .modal-area-name { font-size:1.4rem; font-weight:700; }
+    .modal-area-sub { color:var(--ink-2); font-size:.85rem; }
+    .modal-tags { display:flex; flex-wrap:wrap; gap:.3rem; margin:.3rem 0 .5rem; }
+    .modal-top-row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; }
+    .half-donut-wrap { flex:0 0 140px; }
+    .half-donut-container { position:relative; display:flex; flex-direction:column; align-items:center; }
+    .half-donut-val { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); text-align:center; }
+    .half-donut-num { font-size:1.8rem; font-weight:700; line-height:1; }
+    .half-donut-lbl { font-size:.7rem; color:var(--ink-2); }
+    .modal-minimap { flex:1; height:100px; background:#d9e2ec; border-radius:12px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:.4rem .8rem; }
+    .metric-item { display:flex; justify-content:space-between; font-size:.8rem; border-bottom:1px dashed var(--border); padding:.2rem 0; }
+    .metric-label { color:var(--ink-2); }
+    .metric-value { font-weight:600; }
+    .expand-btn { background:var(--surface-2); border:none; padding:.3rem 1rem; border-radius:40px; font-size:.8rem; cursor:pointer; }
+    .expandable { display:none; margin-top:.2rem; }
+    .expandable.open { display:block; }
+    .pros-cons { display:flex; gap:1.5rem; margin:.5rem 0; font-size:.8rem; flex-wrap:wrap; }
+    .modal-actions { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
+    .btn-green { background:var(--green); color:white; border:none; padding:.4rem 1.2rem; border-radius:40px; font-weight:500; cursor:pointer; }
+    .btn-primary { background:var(--blue); color:white; border:none; padding:.4rem 1.2rem; border-radius:40px; font-weight:500; cursor:pointer; }
+    .btn-secondary { background:var(--surface-2); border:1px solid var(--border); padding:.4rem 1.2rem; border-radius:40px; cursor:pointer; }
+
+    .compare-panel { position:fixed; bottom:0; left:0; right:0; background:white; border-top:2px solid var(--green); z-index:1000; padding:.6rem 1rem; display:none; box-shadow:0 -4px 20px rgba(0,0,0,.08); }
+    .compare-header { display:flex; justify-content:space-between; align-items:center; }
+    .compare-selects { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+    .vs-badge { font-weight:700; color:var(--green); }
+    .map-tooltip { position:absolute; background:rgba(0,0,0,.75); color:white; padding:.2rem .8rem; border-radius:20px; font-size:.8rem; pointer-events:none; display:none; z-index:600; }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo"><div class="dot"></div><span class="logo-text">Suluhu <em>Copilot</em></span></div>
+  <div class="search-wrap" id="searchWrap">
+    <i class="ti ti-search search-icon"></i>
+    <input type="text" id="searchInput" placeholder="Search farmer, village, enterprise…" autocomplete="off">
+    <div class="autocomplete-dropdown" id="acDropdown"></div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" onclick="locateMe()"><i class="ti ti-location"></i><span class="hide-sm"> Near me</span></button>
+    <button class="btn-ghost" id="compareBtn" onclick="toggleCompare()"><i class="ti ti-arrows-diff"></i><span class="hide-sm"> Compare</span></button>
+    <button class="btn-ghost mobile-map-toggle" onclick="toggleMobileMap()"><i class="ti ti-map-2"></i></button>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <button class="filter-chip active" data-filter="priority_score" onclick="setFilter(this,'priority_score')"><i class="ti ti-award"></i> Priority</button>
+  <button class="filter-chip" data-filter="milk_yield_drop" onclick="setFilter(this,'milk_yield_drop')"><i class="ti ti-droplet"></i> Milk drop</button>
+  <button class="filter-chip" data-filter="soil_moisture" onclick="setFilter(this,'soil_moisture')"><i class="ti ti-droplet"></i> Soil moisture</button>
+  <button class="filter-chip" data-filter="sugarcane_risk" onclick="setFilter(this,'sugarcane_risk')"><i class="ti ti-tree"></i> Sugarcane risk</button>
+  <button class="filter-chip" data-filter="vet_visit_due" onclick="setFilter(this,'vet_visit_due')"><i class="ti ti-stethoscope"></i> Vet due</button>
+  <button class="filter-chip" data-filter="data_staleness" onclick="setFilter(this,'data_staleness')"><i class="ti ti-clock"></i> Stale data</button>
+  <div class="filter-sep"></div>
+  <button class="filter-chip" id="heatmapBtn" onclick="toggleHeatmap()"><i class="ti ti-flame"></i> Heatmap</button>
+</div>
+
+<!-- ARCHETYPE BAR -->
+<div class="archetype-bar">
+  <button class="arch-chip active" style="background:#f1f5f9;color:#475569" data-arch="all" onclick="setArchetype(this,'all')">All farmers</button>
+  <button class="arch-chip" style="background:#dcf5eb;color:#065e3f" data-arch="dairy" onclick="setArchetype(this,'dairy')">🐄 Dairy focus</button>
+  <button class="arch-chip" style="background:#fef3c7;color:#78350f" data-arch="sugarcane" onclick="setArchetype(this,'sugarcane')">🌾 Sugarcane</button>
+  <button class="arch-chip" style="background:#dbeafe;color:#1e3a8a" data-arch="mixed" onclick="setArchetype(this,'mixed')">🔄 Mixed</button>
+  <button class="arch-chip" style="background:#f3e8ff;color:#4c1d95" data-arch="high_priority" onclick="setArchetype(this,'high_priority')">⚡ High priority</button>
+  <button class="arch-chip" style="background:#fee2e2;color:#7f1d1d" data-arch="missed_window" onclick="setArchetype(this,'missed_window')">⏳ Missed window</button>
+</div>
+
+<!-- MAIN BODY -->
+<div class="app-body" id="appBody">
+  <div class="left-panel" id="leftPanel">
+    <div class="panel-header">
+      <div class="panel-stats">
+        <div class="pstat"><div class="pstat-num" id="statCount">52</div><div class="pstat-lbl">Farmers</div></div>
+        <div class="pstat"><div class="pstat-num" id="statAvg">—</div><div class="pstat-lbl">Avg priority</div></div>
+        <div class="pstat"><div class="pstat-num" id="statTop">—</div><div class="pstat-lbl">Top farmer</div></div>
+      </div>
+      <div class="sort-row">
+        <select id="sortSelect" onchange="sortAreas()">
+          <option value="priority_score_desc">Priority ↓</option>
+          <option value="priority_score_asc">Priority ↑</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="milk_drop_desc">Milk drop (highest)</option>
+          <option value="soil_moisture_asc">Driest soil</option>
+        </select>
+        <span class="results-count" id="resultsCount">52 results</span>
+      </div>
+    </div>
+    <div class="areas-list" id="areasList"></div>
+  </div>
+
+  <div class="map-panel" id="mapPanel">
+    <div id="map"></div>
+    <div class="map-overlay-top"><span id="mapFilterInfo">Priority Index</span></div>
+    <div class="heatmap-legend" id="heatmapLegend">
+      <div style="font-weight:600;font-size:.7rem;margin-bottom:2px;">Heatmap intensity</div>
+      <div class="gradient"></div>
+      <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--ink-2);">
+        <span>Low</span><span>High</span>
+      </div>
+    </div>
+    <div class="map-legend" id="mapLegend">
+      <div class="legend-row"><div class="legend-dot" style="background:#0ea46e"></div>High (urgent)</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#84cc16"></div>Medium</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#f59e0b"></div>Low</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#ef4444"></div>Critical</div>
+    </div>
+    <button class="mobile-back-btn" onclick="showMobileList()"><i class="ti ti-list"></i> Back to list</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModalOnBackdrop(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      <div class="modal-area-name" id="mAreaName">—</div>
+      <div class="modal-area-sub" id="mAreaSub"></div>
+      <div class="modal-tags" id="mTags"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-top-row">
+        <div class="half-donut-wrap">
+          <div class="half-donut-container">
+            <svg viewBox="0 0 180 100" width="180" height="100" id="halfDonutSvg">
+              <path d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="#edeef2" stroke-width="16" stroke-linecap="round"/>
+              <path d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="#0ea46e" stroke-width="16" stroke-linecap="round"
+                stroke-dasharray="220" stroke-dashoffset="220" id="halfDonutArc"/>
+            </svg>
+            <div class="half-donut-val">
+              <div class="half-donut-num" id="mScore">—</div>
+              <div class="half-donut-lbl">Priority</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-minimap" id="modalMinimap"></div>
+      </div>
+      <div id="mAlert"></div>
+      <div class="modal-section">
+        <div class="modal-section-title"><i class="ti ti-layout-grid"></i> Core metrics</div>
+        <div class="metric-grid" id="mCoreMetrics"></div>
+      </div>
+      <div class="modal-section">
+        <button class="expand-btn" id="expandBtn" onclick="toggleExpand()"><i class="ti ti-chevron-down" id="expandIcon"></i> More details</button>
+        <div class="expandable" id="expandable">
+          <div class="metric-grid" id="mDetailMetrics" style="margin-top:.5rem"></div>
+        </div>
+      </div>
+      <div class="pros-cons" id="mProsCons"></div>
+      <div class="modal-section" id="mSummarySection">
+        <div class="modal-section-title"><i class="ti ti-sparkles"></i> AI advisory</div>
+        <div id="mSummary" style="font-size:.875rem;color:var(--ink-2);line-height:1.7"></div>
+      </div>
+      <div class="modal-section" id="mSecuritySection">
+        <div class="modal-section-title" style="color:#dc2626"><i class="ti ti-shield-exclamation"></i> Priority triggers</div>
+        <div id="mSecurityNotes" style="font-size:.875rem;color:var(--ink-2);line-height:1.7"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-green" onclick="addToCompare()"><i class="ti ti-arrows-diff"></i> Compare</button>
+        <button class="btn-primary" onclick="generatePDF()"><i class="ti ti-file-download"></i> PDF report</button>
+        <button class="btn-secondary" onclick="closeModal()"><i class="ti ti-x"></i> Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARE PANEL -->
+<div class="compare-panel" id="comparePanel">
+  <div class="compare-handle"></div>
+  <div class="compare-header">
+    <div class="compare-title"><i class="ti ti-arrows-diff"></i> Compare farmers</div>
+    <button class="btn-secondary" onclick="generateComparePDF()" style="font-size:.78rem;padding:.35rem .75rem"><i class="ti ti-file-download"></i></button>
+    <button class="modal-close" style="position:relative;top:auto;right:auto;background:var(--surface-3);color:var(--ink)" onclick="toggleCompare()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="compare-body">
+    <div class="compare-selects">
+      <select id="compareA" onchange="renderCompare()"><option value="">Farmer A…</option></select>
+      <div class="vs-badge">VS</div>
+      <select id="compareB" onchange="renderCompare()"><option value="">Farmer B…</option></select>
+    </div>
+    <div id="compareResult"></div>
+  </div>
+</div>
+
+<div class="map-tooltip" id="mapTooltip"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+// --------------------------------------------------------------
+// DATA: 52 farmers with brief-aligned metrics
+// --------------------------------------------------------------
+function generateFarmers() {
+  const names = ["Mukhalisi","Bewton","Mercy","Lewis","Nkirote","Kakamega","Bungoma","Busia","Siaya","Kisumu","Vihiga","Kisii","Nyamira","Homa Bay","Migori","Nairobi","Kiambu","Machakos","Kajiado","Nakuru","Eldoret","Kitale","Baringo","Laikipia","Nyeri","Meru","Embu","Thika","Ruaka","Kikuyu","Limuru","Ngong","Rongai","Kitengela","Athi","Syokimau","Juja","Ruiru","Kasarani","Donholm","Buruburu","Umoja","South B","Langata","Karen","Lavington","Kileleshwa","Parklands","Gigiri","Runda","Muthaiga","Nanyuki"];
+  let farmers = [];
+  for (let i=0; i<52; i++) {
+    const n = names[i % names.length] + (i>4 ? ' ' + Math.floor(i/5) : '');
+    const ent = ['dairy','sugarcane','mixed'][i % 3];
+    const pri = 45 + Math.floor(Math.random() * 50);
+    const milk = Math.floor(Math.random() * 28);
+    const soil = 10 + Math.floor(Math.random() * 55);
+    const sugar = Math.floor(Math.random() * 6);
+    const vet = Math.random() > 0.65 ? 1 : 0;
+    const stale = 1 + Math.floor(Math.random() * 7);
+    const lat = -1.15 - Math.random() * 0.65;
+    const lng = 36.65 + Math.random() * 0.55;
+    farmers.push({
+      id: i + 100,
+      name: n,
+      slug: n.toLowerCase().replace(/\s/g, '-'),
+      lat: lat,
+      lng: lng,
+      priority_score: pri,
+      milk_yield_drop: milk,
+      soil_moisture: soil,
+      sugarcane_risk: sugar,
+      vet_visit_due: vet,
+      data_staleness: stale,
+      enterprise: ent,
+      tags: [
+        milk > 14 ? 'Milk drop' : null,
+        sugar > 3 ? 'Sugarcane risk' : null,
+        vet ? 'Vet due' : null,
+        stale > 4 ? 'Stale data' : null
+      ].filter(Boolean),
+      ai_summary: `Priority ${pri} — ${ent} enterprise. ${milk > 14 ? 'Milk drop: ' + milk + '%' : ''} ${sugar > 3 ? 'Sugarcane risk level ' + sugar : ''}`,
+      security_notes: `${milk > 16 ? 'Milk anomaly' : ''} ${soil < 22 ? 'Dry soil' : ''}`,
+      general_notes: `${ent}, ${pri} priority`,
+      archetype: ent
+    });
+  }
+  return farmers;
+}
+const FARMERS_DATA = generateFarmers();
+window.AREAS_DATA = FARMERS_DATA;
+
+// ----- MAP & HEATMAP -----
+let map = null;
+let heatLayer = null;
+let heatmapVisible = false;
+let markersLayer = null;
+
+function initMap() {
+  if (map) return;
+  map = L.map('map').setView([-1.29, 36.82], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB'
+  }).addTo(map);
+  
+  // Add markers
+  markersLayer = L.layerGroup().addTo(map);
+  updateMarkers();
+}
+
+function updateMarkers() {
+  if (!markersLayer) return;
+  markersLayer.clearLayers();
+  const activeFilter = document.querySelector('.filter-chip.active')?.dataset?.filter || 'priority_score';
+  const data = FARMERS_DATA;
+  
+  data.forEach(d => {
+    let color = '#0ea46e';
+    if (d.priority_score > 80) color = '#ef4444';
+    else if (d.priority_score > 60) color = '#f59e0b';
+    else if (d.priority_score > 40) color = '#84cc16';
+    
+    const marker = L.circleMarker([d.lat, d.lng], {
+      radius: 7,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.8,
+      weight: 2,
+      stroke: true
+    });
+    marker.bindPopup(`
+      <b>${d.name}</b><br>
+      Priority: ${d.priority_score}<br>
+      Enterprise: ${d.enterprise}<br>
+      ${d.milk_yield_drop > 10 ? '🐄 Milk drop: '+d.milk_yield_drop+'%<br>' : ''}
+      ${d.sugarcane_risk > 3 ? '🌾 Sugarcane risk: '+d.sugarcane_risk+'/5' : ''}
+    `);
+    marker.on('click', () => openModal(d.id));
+    markersLayer.addLayer(marker);
+  });
+}
+
+function toggleHeatmap() {
+  heatmapVisible = !heatmapVisible;
+  const btn = document.getElementById('heatmapBtn');
+  const legend = document.getElementById('heatmapLegend');
+  
+  if (heatmapVisible) {
+    btn.style.background = '#ef4444';
+    btn.style.color = 'white';
+    legend.style.display = 'block';
+    showHeatmap();
+  } else {
+    btn.style.background = '';
+    btn.style.color = '';
+    legend.style.display = 'none';
+    hideHeatmap();
+  }
+}
+
+function showHeatmap() {
+  if (!map) initMap();
+  if (heatLayer) {
+    map.addLayer(heatLayer);
+    return;
+  }
+  
+  // Prepare heat data: [lat, lng, intensity]
+  const points = FARMERS_DATA.map(d => {
+    // Use priority_score as intensity (normalized 0-1)
+    const intensity = d.priority_score / 100;
+    return [d.lat, d.lng, intensity];
+  });
+  
+  // Add some extra points around high-priority areas for smoother heatmap
+  const extraPoints = [];
+  FARMERS_DATA.filter(d => d.priority_score > 75).forEach(d => {
+    for (let i = 0; i < 3; i++) {
+      const offset = 0.008 + Math.random() * 0.015;
+      const angle = Math.random() * Math.PI * 2;
+      extraPoints.push([
+        d.lat + Math.cos(angle) * offset,
+        d.lng + Math.sin(angle) * offset,
+        d.priority_score / 100 * 0.7
+      ]);
+    }
+  });
+  
+  const allPoints = [...points, ...extraPoints];
+  
+  heatLayer = L.heatLayer(allPoints, {
+    radius: 25,
+    blur: 15,
+    maxZoom: 12,
+    minOpacity: 0.3,
+    gradient: {
+      0.0: 'blue',
+      0.3: 'cyan',
+      0.5: 'lime',
+      0.7: 'yellow',
+      0.9: 'orange',
+      1.0: 'red'
+    }
+  }).addTo(map);
+}
+
+function hideHeatmap() {
+  if (heatLayer && map) {
+    map.removeLayer(heatLayer);
+  }
+}
+
+// ----- UI FUNCTIONS -----
+function setFilter(el, filter) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+  updateMarkers();
+}
+
+function setArchetype(el, arch) {
+  document.querySelectorAll('.arch-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+  updateMarkers();
+}
+
+function sortAreas() { renderList(); }
+
+function renderList() {
+  const list = document.getElementById('areasList');
+  const sort = document.getElementById('sortSelect').value;
+  let data = [...FARMERS_DATA];
+  
+  const arch = document.querySelector('.arch-chip.active')?.dataset.arch || 'all';
+  if (arch === 'dairy') data = data.filter(d => d.enterprise === 'dairy');
+  else if (arch === 'sugarcane') data = data.filter(d => d.enterprise === 'sugarcane');
+  else if (arch === 'mixed') data = data.filter(d => d.enterprise === 'mixed');
+  else if (arch === 'high_priority') data = data.filter(d => d.priority_score > 80);
+  else if (arch === 'missed_window') data = data.filter(d => d.data_staleness > 4);
+  
+  if (sort === 'priority_score_desc') data.sort((a, b) => b.priority_score - a.priority_score);
+  else if (sort === 'priority_score_asc') data.sort((a, b) => a.priority_score - b.priority_score);
+  else if (sort === 'name_asc') data.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === 'milk_drop_desc') data.sort((a, b) => b.milk_yield_drop - a.milk_yield_drop);
+  else if (sort === 'soil_moisture_asc') data.sort((a, b) => a.soil_moisture - b.soil_moisture);
+  
+  document.getElementById('statCount').textContent = data.length;
+  const avg = data.reduce((s, d) => s + d.priority_score, 0) / (data.length || 1);
+  document.getElementById('statAvg').textContent = Math.round(avg);
+  if (data.length) document.getElementById('statTop').textContent = data[0].name.slice(0, 12);
+  
+  list.innerHTML = data.map(d => `
+    <div class="area-item" onclick="openModal(${d.id})">
+      <div>
+        <span class="area-name">${d.name}</span>
+        <span class="area-tag">${d.enterprise}</span>
+      </div>
+      <div>
+        <span class="area-score" style="background:${d.priority_score > 80 ? '#fecaca' : d.priority_score > 60 ? '#fef3c7' : 'var(--surface-2)'}">
+          ${d.priority_score}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleCompare() {
+  const p = document.getElementById('comparePanel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+  renderCompare();
+}
+
+function toggleMobileMap() {
+  document.getElementById('leftPanel').style.display = 'none';
+}
+
+function showMobileList() {
+  document.getElementById('leftPanel').style.display = 'flex';
+}
+
+function locateMe() {
+  alert('📍 Using last known location (Kakamega region)');
+}
+
+function addToCompare() { alert('✅ Added to compare'); }
+function generatePDF() { alert('📄 PDF report generated (simulated)'); }
+function generateComparePDF() { alert('📄 Compare PDF generated'); }
+function closeModalOnBackdrop(e) { if (e.target === e.currentTarget) closeModal(); }
+function closeModal() { document.getElementById('modalBackdrop').style.display = 'none'; }
+function toggleExpand() {
+  const e = document.getElementById('expandable');
+  e.classList.toggle('open');
+  document.getElementById('expandIcon').style.transform = e.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+function openModal(id) {
+  const d = FARMERS_DATA.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('mAreaName').textContent = d.name;
+  document.getElementById('mAreaSub').textContent = `Enterprise: ${d.enterprise} · Priority ${d.priority_score}`;
+  document.getElementById('mTags').innerHTML = d.tags.map(t => 
+    `<span class="filter-chip" style="background:#eef2f6">${t}</span>`
+  ).join(' ');
+  document.getElementById('mScore').textContent = d.priority_score;
+  
+  document.getElementById('mCoreMetrics').innerHTML = `
+    <div class="metric-item"><span class="metric-label">Milk drop</span><span class="metric-value">${d.milk_yield_drop}%</span></div>
+    <div class="metric-item"><span class="metric-label">Soil moisture</span><span class="metric-value">${d.soil_moisture}%</span></div>
+    <div class="metric-item"><span class="metric-label">Sugarcane risk</span><span class="metric-value">${d.sugarcane_risk}/5</span></div>
+    <div class="metric-item"><span class="metric-label">Vet due</span><span class="metric-value">${d.vet_visit_due ? '🔴 Yes' : '✅ No'}</span></div>
+    <div class="metric-item"><span class="metric-label">Data staleness</span><span class="metric-value">${d.data_staleness} days</span></div>
+  `;
+  document.getElementById('mDetailMetrics').innerHTML = `
+    <div class="metric-item"><span class="metric-label">Enterprise</span><span class="metric-value">${d.enterprise}</span></div>
+    <div class="metric-item"><span class="metric-label">Priority score</span><span class="metric-value">${d.priority_score}</span></div>
+    <div class="metric-item"><span class="metric-label">Last visit</span><span class="metric-value">${d.data_staleness} days ago</span></div>
+  `;
+  document.getElementById('mSummary').textContent = d.ai_summary;
+  document.getElementById('mSecurityNotes').textContent = `⚠️ ${d.security_notes || 'No critical flags'}`;
+  document.getElementById('mProsCons').innerHTML = `
+    <div>✅ ${d.enterprise} enterprise</div>
+    <div>📌 ${d.general_notes}</div>
+  `;
+  document.getElementById('modalBackdrop').style.display = 'flex';
+  
+  const arc = document.getElementById('halfDonutArc');
+  const pct = Math.min(100, d.priority_score);
+  const offset = 220 - (pct / 100) * 220;
+  arc.style.strokeDashoffset = offset;
+  arc.style.stroke = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#0ea46e';
+}
+
+function renderCompare() {
+  const a = document.getElementById('compareA').value;
+  const b = document.getElementById('compareB').value;
+  const fa = FARMERS_DATA.find(x => x.id == a);
+  const fb = FARMERS_DATA.find(x => x.id == b);
+  const res = document.getElementById('compareResult');
+  if (!fa || !fb) {
+    res.innerHTML = '<div class="text-sm" style="padding:.5rem 0">Select two farmers</div>';
+    return;
+  }
+  res.innerHTML = `
+    <div style="display:flex;gap:1.5rem;padding:.5rem 0;flex-wrap:wrap">
+      <div style="background:var(--surface-2);padding:.6rem 1rem;border-radius:8px;flex:1;min-width:120px;">
+        <strong>${fa.name}</strong> (${fa.enterprise})<br>
+        Priority ${fa.priority_score}<br>
+        Milk drop ${fa.milk_yield_drop}%<br>
+        Soil ${fa.soil_moisture}%
+      </div>
+      <div style="background:var(--surface-2);padding:.6rem 1rem;border-radius:8px;flex:1;min-width:120px;">
+        <strong>${fb.name}</strong> (${fb.enterprise})<br>
+        Priority ${fb.priority_score}<br>
+        Milk drop ${fb.milk_yield_drop}%<br>
+        Soil ${fb.soil_moisture}%
+      </div>
+    </div>
+  `;
+}
+
+function populateCompare() {
+  const selA = document.getElementById('compareA');
+  const selB = document.getElementById('compareB');
+  FARMERS_DATA.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    selA.appendChild(opt.cloneNode(true));
+    selB.appendChild(opt);
+  });
+}
+
+// ----- INIT -----
+document.addEventListener('DOMContentLoaded', function() {
+  renderList();
+  populateCompare();
+  initMap();
+  updateMarkers();
+});
+
+// Expose to inline
+window.renderList = renderList;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.toggleCompare = toggleCompare;
+window.renderCompare = renderCompare;
+window.setFilter = setFilter;
+window.setArchetype = setArchetype;
+window.sortAreas = sortAreas;
+window.toggleMobileMap = toggleMobileMap;
+window.showMobileList = showMobileList;
+window.locateMe = locateMe;
+window.toggleHeatmap = toggleHeatmap;
+window.addToCompare = addToCompare;
+window.generatePDF = generatePDF;
+window.generateComparePDF = generateComparePDF;
+window.closeModalOnBackdrop = closeModalOnBackdrop;
+window.toggleExpand = toggleExpand;
+</script>
+</body>
+</html>

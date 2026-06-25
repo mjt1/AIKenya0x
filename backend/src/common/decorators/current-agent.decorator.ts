@@ -6,8 +6,6 @@ export interface AuthenticatedAgent {
   email: string;
   name: string;
   county: string;
-  cooperative: string;
-  cooperativeId: string | null;
   role: Role;
 }
 

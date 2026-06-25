@@ -1,0 +1,50 @@
+# ── Frontend — Production ──────────────────────────────────────────────────────
+# Three-stage build: deps → builder → runtime (standalone Next.js output)
+
+# ── Stage 1: install dependencies ─────────────────────────────────────────────
+FROM node:22-alpine AS deps
+
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --non-interactive
+
+
+# ── Stage 2: build ─────────────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Next.js standalone output bundles only the files needed to run the server,
+# dramatically reducing the final image size.
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN yarn build
+
+
+# ── Stage 3: runtime ───────────────────────────────────────────────────────────
+FROM node:22-alpine AS runtime
+
+LABEL maintainer="DigiCow Africa <dev@digicow.africa>"
+LABEL description="Suluhu Frontend — Next.js PWA for extension agents"
+
+RUN addgroup -S suluhu && adduser -S suluhu -G suluhu
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy the standalone server + static assets produced by `next build`
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+RUN chown -R suluhu:suluhu /app
+USER suluhu
+
+EXPOSE 3001
+
+CMD ["node", "server.js"]

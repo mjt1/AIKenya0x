@@ -32,8 +32,6 @@ export interface ReassignPreview {
   farmerExists: boolean;
   targetAgentExists: boolean;
   fromAgentId: string | null;
-  fromCooperativeId: string | null;
-  toCooperativeId: string | null;
 }
 
 @Injectable()
@@ -238,7 +236,7 @@ export class FarmersRepository {
 
   /**
    * Inspect a proposed reassignment without performing it. Returns existence
-   * flags and the source/target cooperative IDs so the caller can authorize.
+   * flags and the source agent so the caller can authorize.
    */
   async reassignPreview(
     farmerId: string,
@@ -250,9 +248,7 @@ export class FarmersRepository {
        OPTIONAL MATCH (fromAgent:Agent)-[:MANAGES]->(f)
        RETURN f IS NOT NULL          AS farmerExists,
               toAgent IS NOT NULL    AS targetAgentExists,
-              fromAgent.id           AS fromAgentId,
-              fromAgent.cooperativeId AS fromCooperativeId,
-              toAgent.cooperativeId   AS toCooperativeId`,
+              fromAgent.id           AS fromAgentId`,
       { farmerId, toAgentId },
     );
     const r = records[0];
@@ -260,10 +256,6 @@ export class FarmersRepository {
       farmerExists: Boolean(r.get('farmerExists')),
       targetAgentExists: Boolean(r.get('targetAgentExists')),
       fromAgentId: (r.get('fromAgentId') as string | null) ?? null,
-      fromCooperativeId:
-        (r.get('fromCooperativeId') as string | null) ?? null,
-      toCooperativeId:
-        (r.get('toCooperativeId') as string | null) ?? null,
     };
   }
 

@@ -3,7 +3,6 @@ import { Role } from '../../../common/types/rbac.types';
 
 export class PlatformOverviewResponseDto {
   @ApiProperty() totalAgents!: number;
-  @ApiProperty() totalCooperatives!: number;
   @ApiProperty() totalFarmers!: number;
   @ApiProperty() totalVisits!: number;
   @ApiProperty() visitsThisWeek!: number;
@@ -24,7 +23,6 @@ export class AgentRollupRowDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ format: 'email' }) email!: string;
-  @ApiProperty() cooperative!: string;
   @ApiProperty({ enum: Role }) role!: Role;
   @ApiProperty() caseloadSize!: number;
   @ApiProperty() totalVisits!: number;

@@ -26,6 +26,13 @@ export class RecommendationDto {
   priority!: number;
   @ApiProperty({ enum: RECOMMENDATION_STATUSES }) status!: string;
   @ApiProperty({
+    nullable: true,
+    type: String,
+    description:
+      'Optional free-text outcome note recorded when the agent resolves the rec (e.g. why it was partly_done / not_done).',
+  })
+  note!: string | null;
+  @ApiProperty({
     description: 'Stable key used for dedup against existing pending recs.',
   })
   dedupeKey!: string;

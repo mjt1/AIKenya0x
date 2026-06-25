@@ -14,15 +14,8 @@ export class AgentsRepository {
                      a.name = $name,
                      a.passwordHash = $passwordHash,
                      a.county = $county,
-                     a.cooperative = $cooperative,
-                     a.cooperativeId = $cooperativeId,
                      a.role = $role,
                      a.createdAt = datetime()
-       WITH a
-       OPTIONAL MATCH (c:Cooperative {id: $cooperativeId})
-       FOREACH (_ IN CASE WHEN c IS NULL THEN [] ELSE [1] END |
-         MERGE (a)-[:BELONGS_TO]->(c)
-       )
        RETURN a`,
       { ...agent },
     );
@@ -54,15 +47,6 @@ export class AgentsRepository {
     return records.map((r) => this.hydrate(r.get('a').properties));
   }
 
-  async listByCooperative(cooperativeId: string): Promise<AgentRecord[]> {
-    const records = await this.neo4j.read(
-      `MATCH (a:Agent {cooperativeId: $cooperativeId})
-       RETURN a ORDER BY a.name ASC`,
-      { cooperativeId },
-    );
-    return records.map((r) => this.hydrate(r.get('a').properties));
-  }
-
   async countAll(): Promise<number> {
     const records = await this.neo4j.read(
       `MATCH (a:Agent) RETURN count(a) AS n`,
@@ -81,26 +65,6 @@ export class AgentsRepository {
     return this.hydrate(records[0].get('a').properties);
   }
 
-  async assignCooperative(
-    id: string,
-    cooperativeId: string,
-    cooperativeName: string,
-  ): Promise<AgentRecord | null> {
-    const records = await this.neo4j.write(
-      `MATCH (a:Agent {id: $id})
-       OPTIONAL MATCH (a)-[old:BELONGS_TO]->(:Cooperative)
-       DELETE old
-       WITH a
-       MATCH (c:Cooperative {id: $cooperativeId})
-       MERGE (a)-[:BELONGS_TO]->(c)
-       SET a.cooperativeId = c.id, a.cooperative = $cooperativeName
-       RETURN a`,
-      { id, cooperativeId, cooperativeName },
-    );
-    if (records.length === 0) return null;
-    return this.hydrate(records[0].get('a').properties);
-  }
-
   async caseloadSize(agentId: string): Promise<number> {
     const records = await this.neo4j.read(
       `MATCH (:Agent {id: $agentId})-[:MANAGES]->(f:Farmer)
@@ -110,14 +74,11 @@ export class AgentsRepository {
     return Number(records[0].get('size'));
   }
 
-  /** Backfill role/cooperativeId defaults so legacy rows stay safe. */
+  /** Backfill role default so legacy rows stay safe. */
   private hydrate(props: Record<string, unknown>): AgentRecord {
     return {
       ...(props as unknown as AgentRecord),
       role: ((props as { role?: Role }).role ?? Role.agent) as Role,
-      cooperativeId:
-        (props as { cooperativeId?: string | null }).cooperativeId ?? null,
     };
   }
 }
-

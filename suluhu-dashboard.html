@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suluhu — Agent Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --soil: #3b2a1a;
+  --soil-mid: #5c3d1e;
+  --cane: #4a7c3f;
+  --cane-light: #7ab648;
+  --cane-pale: #e8f5e0;
+  --dairy: #2171b5;
+  --dairy-light: #6baed6;
+  --dairy-pale: #deeef8;
+  --amber: #e67c1b;
+  --amber-pale: #fef0dc;
+  --red: #c0392b;
+  --red-pale: #fde8e6;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5a6171;
+  --text-muted: #9aa0ab;
+  --bg-page: #f4f2ee;
+  --bg-white: #ffffff;
+  --bg-surface: #f9f8f6;
+  --border: #e2ddd7;
+  --sidebar-w: 228px;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font: 'Inter', sans-serif;
+}
+body { font-family: var(--font); background: var(--bg-page); color: var(--text-primary); display: flex; min-height: 100vh; font-size: 13.5px; }
+
+/* SIDEBAR */
+.sidebar { width: var(--sidebar-w); background: var(--soil); color: #e8e0d4; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+.sidebar-brand { padding: 18px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.brand-row { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 38px; height: 38px; background: var(--cane); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 16px; font-weight: 600; color: #fff; letter-spacing: -0.5px; }
+.brand-name { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: #fff; line-height: 1.2; }
+.brand-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.sidebar-agent { padding: 12px 16px; background: rgba(255,255,255,0.05); margin: 10px 10px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+.agent-avatar { width: 30px; height: 30px; background: var(--cane); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.agent-name { font-size: 12.5px; font-weight: 500; color: #fff; }
+.agent-zone { font-size: 11px; color: rgba(255,255,255,0.45); }
+.sidebar-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.3); padding: 18px 16px 6px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 16px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
+.nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.nav-item.active { color: #fff; background: rgba(74,124,63,0.25); border-left-color: var(--cane-light); }
+.nav-item i { font-size: 17px; }
+.nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; font-weight: 600; border-radius: 10px; padding: 1px 6px; }
+.nav-badge.amber { background: var(--amber); }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.07); margin-top: auto; }
+.conn-status { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: rgba(255,255,255,0.4); }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cane-light); flex-shrink: 0; }
+.conn-dot.offline { background: var(--amber); }
+
+/* TOPBAR */
+.main { margin-left: var(--sidebar-w); display: flex; flex-direction: column; flex: 1; }
+.topbar { background: var(--bg-white); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 54px; position: sticky; top: 0; z-index: 50; }
+.topbar-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+.topbar-date { font-size: 12px; color: var(--text-muted); margin-left: 2px; }
+.topbar-spacer { flex: 1; }
+.weather-pill { display: flex; align-items: center; gap: 6px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; color: var(--text-secondary); }
+.weather-pill i { color: var(--amber); }
+.kmd-alert { display: flex; align-items: center; gap: 6px; background: var(--amber-pale); border: 1px solid #f0c070; border-radius: 20px; padding: 5px 12px; font-size: 12px; color: #7a4b0a; font-weight: 500; cursor: pointer; }
+.icon-btn { position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; color: var(--text-secondary); font-size: 18px; }
+.icon-btn:hover { background: var(--bg-surface); }
+.notif-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; }
+
+/* CONTENT */
+.content { padding: 20px 22px; flex: 1; }
+
+/* DAILY MISSION BAR */
+.mission-bar { background: var(--soil); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 20px; margin-bottom: 20px; color: #fff; }
+.mission-text h2 { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.mission-text p { font-size: 12.5px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+.mission-spacer { flex: 1; }
+.mission-stat { text-align: center; padding: 0 16px; border-left: 1px solid rgba(255,255,255,0.1); }
+.mission-stat-val { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.mission-stat-val.cane { color: var(--cane-light); }
+.mission-stat-val.dairy { color: var(--dairy-light); }
+.mission-stat-label { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+.mission-btn { background: var(--cane); color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 500; font-family: var(--font); cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mission-btn:hover { background: var(--cane-light); }
+
+/* GRID LAYOUT */
+.grid-main { display: grid; grid-template-columns: 1fr 300px; gap: 18px; }
+.col-left { display: flex; flex-direction: column; gap: 16px; }
+.col-right { display: flex; flex-direction: column; gap: 16px; }
+
+/* PANEL */
+.panel { background: var(--bg-white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px 10px; }
+.panel-title { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; }
+.panel-link { font-size: 12px; color: var(--cane); cursor: pointer; display: flex; align-items: center; gap: 3px; font-weight: 500; }
+.panel-body { padding: 0 16px 14px; }
+.panel-tabs { display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border); }
+.tab { font-size: 12.5px; padding: 7px 14px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; }
+.tab.active { color: var(--cane); border-bottom-color: var(--cane); }
+
+/* PRIORITY QUEUE */
+.priority-header { display: grid; grid-template-columns: 28px 1fr 72px 72px 90px; gap: 8px; padding: 6px 16px; font-size: 11px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+.farmer-row { display: grid; grid-template-columns: 28px 1fr 72px 72px 90px; gap: 8px; padding: 10px 16px; align-items: center; border-bottom: 1px solid var(--bg-surface); cursor: pointer; transition: background 0.12s; }
+.farmer-row:last-child { border-bottom: none; }
+.farmer-row:hover { background: var(--bg-surface); }
+.rank { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.rank.r1 { color: var(--red); }
+.rank.r2 { color: var(--amber); }
+.rank.r3 { color: var(--cane); }
+.farmer-info { }
+.farmer-name { font-size: 13px; font-weight: 500; }
+.farmer-reason { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+.enterprise-pill { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
+.ep-dairy { background: var(--dairy-pale); color: var(--dairy); }
+.ep-cane { background: var(--cane-pale); color: #2d5a23; }
+.ep-mixed { background: #f0ebe0; color: var(--soil-mid); }
+.score-bar-wrap { }
+.score-bar-bg { height: 5px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.score-bar-fill { height: 100%; border-radius: 3px; }
+.score-val { font-size: 12px; font-weight: 600; }
+.risk-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; display: inline-block; }
+.risk-critical { background: var(--red-pale); color: var(--red); }
+.risk-high { background: var(--amber-pale); color: #7a4b0a; }
+.risk-medium { background: var(--cane-pale); color: #2d5a23; }
+.risk-low { background: #f0eff0; color: var(--text-secondary); }
+.visit-btn { font-size: 11.5px; font-weight: 500; color: var(--cane); border: 1px solid var(--cane-light); border-radius: 6px; padding: 4px 10px; background: none; cursor: pointer; font-family: var(--font); }
+.visit-btn:hover { background: var(--cane-pale); }
+
+/* DEMAND AGGREGATOR */
+.demand-item { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bg-surface); }
+.demand-item:last-child { border-bottom: none; }
+.demand-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.demand-icon.cane { background: var(--cane-pale); color: var(--cane); }
+.demand-icon.dairy { background: var(--dairy-pale); color: var(--dairy); }
+.demand-info { flex: 1; }
+.demand-name { font-size: 13px; font-weight: 500; }
+.demand-sub { font-size: 11.5px; color: var(--text-muted); }
+.demand-qty { font-size: 13px; font-weight: 600; text-align: right; }
+.demand-farms { font-size: 11px; color: var(--text-muted); text-align: right; }
+
+/* RISK PROPAGATION */
+.risk-map-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.risk-farm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.risk-cell { height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: pointer; position: relative; }
+.rc-clear { background: var(--cane-pale); color: #2d5a23; }
+.rc-watch { background: var(--amber-pale); color: #7a4b0a; }
+.rc-alert { background: var(--red-pale); color: var(--red); }
+.rc-na { background: var(--bg-surface); color: var(--text-muted); }
+.risk-legend { display: flex; gap: 12px; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* GRAPHRAG */
+.rag-chat { background: var(--bg-surface); border-radius: 8px; padding: 12px; margin-bottom: 10px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.rag-msg { font-size: 12.5px; line-height: 1.5; }
+.rag-msg.user { background: var(--soil); color: #fff; border-radius: 8px 8px 2px 8px; padding: 7px 10px; align-self: flex-end; max-width: 88%; }
+.rag-msg.agent { background: var(--bg-white); border: 1px solid var(--border); border-radius: 8px 8px 8px 2px; padding: 7px 10px; align-self: flex-start; max-width: 92%; }
+.rag-source { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 3px; }
+.rag-input-row { display: flex; gap: 8px; }
+.rag-input { flex: 1; background: var(--bg-white); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-family: var(--font); color: var(--text-primary); outline: none; }
+.rag-input:focus { border-color: var(--cane-light); }
+.rag-send { background: var(--cane); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; }
+.rag-send:hover { background: var(--cane-light); }
+
+/* VISIT LOG */
+.log-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--bg-surface); }
+.log-item:last-child { border-bottom: none; }
+.log-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.log-dot.done { background: var(--cane-light); }
+.log-dot.pending { background: var(--amber); }
+.log-info { flex: 1; }
+.log-name { font-size: 12.5px; font-weight: 500; }
+.log-action { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.log-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.log-status { font-size: 11px; font-weight: 600; }
+.log-status.done { color: var(--cane); }
+.log-status.pending { color: var(--amber); }
+
+/* SCORE LEGEND */
+.score-legend { display: flex; gap: 14px; padding: 8px 16px; background: var(--bg-surface); border-top: 1px solid var(--border); }
+.sl-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.sl-bar { width: 16px; height: 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-row">
+      <div class="brand-mark">Su</div>
+      <div>
+        <div class="brand-name">Suluhu</div>
+        <div class="brand-sub">Farmer Intelligence Copilot</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-agent">
+    <div class="agent-avatar">BM</div>
+    <div>
+      <div class="agent-name">Bewton Maina</div>
+      <div class="agent-zone">Kakamega North Zone · 50 farms</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Core Loop</div>
+  <div class="nav-item active"><i class="ti ti-list-numbers"></i> Today's Priority Queue <span class="nav-badge">5</span></div>
+  <div class="nav-item"><i class="ti ti-map-pin"></i> Capture Field Visit</div>
+  <div class="nav-item"><i class="ti ti-route"></i> Route Planner</div>
+
+  <div class="sidebar-section">Intelligence</div>
+  <div class="nav-item"><i class="ti ti-robot"></i> GraphRAG Advisory</div>
+  <div class="nav-item"><i class="ti ti-alert-triangle"></i> Risk Propagation <span class="nav-badge amber">2</span></div>
+  <div class="nav-item"><i class="ti ti-boxes"></i> Input Demand Aggregator</div>
+
+  <div class="sidebar-section">Farms</div>
+  <div class="nav-item"><i class="ti ti-seeding"></i> Sugarcane Timelines</div>
+  <div class="nav-item"><i class="ti ti-cow"></i> Dairy Herd Tracker</div>
+  <div class="nav-item"><i class="ti ti-users"></i> All 50 Farmers</div>
+
+  <div class="sidebar-section">Reporting</div>
+  <div class="nav-item"><i class="ti ti-chart-bar"></i> Yield Analytics</div>
+  <div class="nav-item"><i class="ti ti-settings"></i> Settings</div>
+
+  <div class="sidebar-footer">
+    <div class="conn-status"><div class="conn-dot"></div> Neo4j AuraDB · Connected</div>
+    <div class="conn-status" style="margin-top:5px;"><div class="conn-dot"></div> KMD Weather · Live</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div>
+      <div class="topbar-title">Agent Dashboard</div>
+      <div class="topbar-date">Tuesday, 25 June 2024 · Kakamega County</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="weather-pill">
+      <i class="ti ti-cloud-rain" style="font-size:15px;"></i>
+      22°C · Light rain expected 14:00–17:00
+    </div>
+    <div class="kmd-alert">
+      <i class="ti ti-alert-triangle" style="font-size:14px;"></i>
+      KMD: Armyworm risk HIGH — Western Kenya
+    </div>
+    <div class="icon-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></div>
+  </header>
+
+  <div class="content">
+    <!-- MISSION BAR -->
+    <div class="mission-bar">
+      <div class="mission-text">
+        <h2>Good morning, Bewton. Your top 5 visits for today are ready.</h2>
+        <p>Ranked by Cypher prioritisation · Last synced 06:14 AM · 50 farmers in caseload</p>
+      </div>
+      <div class="mission-spacer"></div>
+      <div class="mission-stat">
+        <div class="mission-stat-val cane">23</div>
+        <div class="mission-stat-label">Sugarcane farms</div>
+      </div>
+      <div class="mission-stat">
+        <div class="mission-stat-val dairy">19</div>
+        <div class="mission-stat-label">Dairy farms</div>
+      </div>
+      <div class="mission-stat">
+        <div class="mission-stat-val" style="color:#e8e0d4;">8</div>
+        <div class="mission-stat-label">Mixed farms</div>
+      </div>
+      <button class="mission-btn"><i class="ti ti-map-pin" style="font-size:15px;"></i> Start Today's Route</button>
+    </div>
+
+    <div class="grid-main">
+      <!-- LEFT COLUMN -->
+      <div class="col-left">
+
+        <!-- PRIORITY QUEUE -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Today's Priority Queue</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11.5px;color:var(--text-muted);">Ranked by unified Cypher score</span>
+              <div class="panel-link">All 50 farmers <i class="ti ti-arrow-right"></i></div>
+            </div>
+          </div>
+          <div class="priority-header">
+            <div>#</div>
+            <div>Farmer · Reason</div>
+            <div>Enterprise</div>
+            <div>Score</div>
+            <div>Risk · Action</div>
+          </div>
+
+          <!-- Row 1 -->
+          <div class="farmer-row">
+            <div class="rank r1">1</div>
+            <div class="farmer-info">
+              <div class="farmer-name">Achieng Ouma</div>
+              <div class="farmer-reason"><i class="ti ti-trending-down" style="font-size:13px;color:var(--red);"></i> Milk yield −18% over 3 days · Heat cycle day 20</div>
+            </div>
+            <div><span class="enterprise-pill ep-dairy"><i class="ti ti-cow" style="font-size:10px;"></i> Dairy</span></div>
+            <div>
+              <div class="score-val" style="color:var(--red);">91</div>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:91%;background:var(--red);"></div></div>
+            </div>
+            <div><span class="risk-tag risk-critical">Critical</span><br><button class="visit-btn" style="margin-top:5px;">Log visit</button></div>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="farmer-row">
+            <div class="rank r2">2</div>
+            <div class="farmer-info">
+              <div class="farmer-name">Wekesa Barasa</div>
+              <div class="farmer-reason"><i class="ti ti-droplet" style="font-size:13px;color:var(--amber);"></i> Soil moisture anomaly · Ratoon top-dressing window open</div>
+            </div>
+            <div><span class="enterprise-pill ep-cane"><i class="ti ti-seeding" style="font-size:10px;"></i> Cane</span></div>
+            <div>
+              <div class="score-val" style="color:var(--amber);">84</div>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:84%;background:var(--amber);"></div></div>
+            </div>
+            <div><span class="risk-tag risk-high">High</span><br><button class="visit-btn" style="margin-top:5px;">Log visit</button></div>
+          </div>
+
+          <!-- Row 3 -->
+          <div class="farmer-row">
+            <div class="rank r3">3</div>
+            <div class="farmer-info">
+              <div class="farmer-name">Nafula Simiyu</div>
+              <div class="farmer-reason"><i class="ti ti-virus" style="font-size:13px;color:var(--amber);"></i> Sugarcane smut suspected · NEAR-farm propagation risk</div>
+            </div>
+            <div><span class="enterprise-pill ep-mixed"><i class="ti ti-arrows-split-2" style="font-size:10px;"></i> Mixed</span></div>
+            <div>
+              <div class="score-val" style="color:var(--amber);">79</div>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:79%;background:var(--amber);"></div></div>
+            </div>
+            <div><span class="risk-tag risk-high">High</span><br><button class="visit-btn" style="margin-top:5px;">Log visit</button></div>
+          </div>
+
+          <!-- Row 4 -->
+          <div class="farmer-row">
+            <div class="rank" style="color:var(--cane);">4</div>
+            <div class="farmer-info">
+              <div class="farmer-name">Kiplagat Rono</div>
+              <div class="farmer-reason"><i class="ti ti-clock" style="font-size:13px;color:var(--text-muted);"></i> Data stale 14 days · Vaccination due (FMD booster)</div>
+            </div>
+            <div><span class="enterprise-pill ep-dairy"><i class="ti ti-cow" style="font-size:10px;"></i> Dairy</span></div>
+            <div>
+              <div class="score-val" style="color:var(--cane);">67</div>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:67%;background:var(--cane);"></div></div>
+            </div>
+            <div><span class="risk-tag risk-medium">Medium</span><br><button class="visit-btn" style="margin-top:5px;">Log visit</button></div>
+          </div>
+
+          <!-- Row 5 -->
+          <div class="farmer-row">
+            <div class="rank" style="color:var(--cane);">5</div>
+            <div class="farmer-info">
+              <div class="farmer-name">Moraa Nyaboke</div>
+              <div class="farmer-reason"><i class="ti ti-plant" style="font-size:13px;color:var(--cane);"></i> Weeding window active · CAN top-dress scheduled</div>
+            </div>
+            <div><span class="enterprise-pill ep-cane"><i class="ti ti-seeding" style="font-size:10px;"></i> Cane</span></div>
+            <div>
+              <div class="score-val" style="color:var(--cane);">61</div>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:61%;background:var(--cane);"></div></div>
+            </div>
+            <div><span class="risk-tag risk-medium">Medium</span><br><button class="visit-btn" style="margin-top:5px;">Log visit</button></div>
+          </div>
+
+          <div class="score-legend">
+            <div class="sl-item"><div class="sl-bar" style="background:var(--red);"></div>Critical (≥85)</div>
+            <div class="sl-item"><div class="sl-bar" style="background:var(--amber);"></div>High (65–84)</div>
+            <div class="sl-item"><div class="sl-bar" style="background:var(--cane);"></div>Medium (40–64)</div>
+            <div class="sl-item"><div class="sl-bar" style="background:var(--bg-surface);border:1px solid var(--border);"></div>Low (&lt;40)</div>
+            <div style="flex:1;"></div>
+            <span style="font-size:11px;color:var(--text-muted);">Score = milk drop × stale days × weather risk × bio-window urgency</span>
+          </div>
+        </div>
+
+        <!-- RISK PROPAGATION MAP -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Risk Propagation · Sugarcane Smut Alert</div>
+            <div class="panel-link">View graph <i class="ti ti-arrow-right"></i></div>
+          </div>
+          <div class="panel-body">
+            <div class="risk-map-label">Farms within 2-hop NEAR relationships of Nafula Simiyu (confirmed smut risk)</div>
+            <div class="risk-farm-grid">
+              <div class="risk-cell rc-alert" title="Nafula Simiyu — Source">NS</div>
+              <div class="risk-cell rc-watch" title="Barasa Wekesa — Adjacent">BW</div>
+              <div class="risk-cell rc-watch" title="Odhiambo Juma — Adjacent">OJ</div>
+              <div class="risk-cell rc-clear">MK</div>
+              <div class="risk-cell rc-clear">PN</div>
+              <div class="risk-cell rc-na">—</div>
+              <div class="risk-cell rc-na">—</div>
+
+              <div class="risk-cell rc-watch">AK</div>
+              <div class="risk-cell rc-clear">LM</div>
+              <div class="risk-cell rc-clear">TO</div>
+              <div class="risk-cell rc-clear">RE</div>
+              <div class="risk-cell rc-na">—</div>
+              <div class="risk-cell rc-na">—</div>
+              <div class="risk-cell rc-na">—</div>
+            </div>
+            <div class="risk-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--red-pale);border:1px solid var(--red);"></div>Confirmed / source</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--amber-pale);border:1px solid var(--amber);"></div>Watch — within 2 hops</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--cane-pale);border:1px solid var(--cane);"></div>Clear</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col-right">
+
+        <!-- GRAPHRAG ADVISORY -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">GraphRAG Advisory</div>
+            <div style="font-size:11px;color:var(--text-muted);">Grounded · KALRO manuals</div>
+          </div>
+          <div class="panel-body">
+            <div class="rag-chat" id="ragChat">
+              <div class="rag-msg agent">
+                Ready to advise on Achieng Ouma's herd or any of today's 5 priority farms. Ask me anything.
+                <div class="rag-source"><i class="ti ti-book" style="font-size:11px;"></i> KALRO Dairy Manual · Achieng subgraph loaded</div>
+              </div>
+              <div class="rag-msg user">Achieng's milk is down 18%. Could this be heat stress or mastitis?</div>
+              <div class="rag-msg agent">
+                Given day 20 of the heat cycle and the 3-day trend, prioritise a rectal exam for heat detection before ruling out mastitis. California Mastitis Test (CMT) should follow if milk appearance is abnormal. KALRO recommends 500 ml Oxytocin + milking hygiene audit if CMT is positive.
+                <div class="rag-source"><i class="ti ti-book" style="font-size:11px;"></i> KALRO Vet Manual §4.2 · Achieng: last visit 11 Jun</div>
+              </div>
+            </div>
+            <div class="rag-input-row">
+              <input class="rag-input" type="text" id="ragInput" placeholder="Ask about a farmer, crop, or issue…">
+              <button class="rag-send" onclick="sendRAG()"><i class="ti ti-send" style="font-size:15px;"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- INPUT DEMAND AGGREGATOR -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Input Demand — This Week</div>
+            <div class="panel-link">Full report <i class="ti ti-arrow-right"></i></div>
+          </div>
+          <div class="panel-body">
+            <div class="demand-item">
+              <div class="demand-icon cane"><i class="ti ti-flask" style="font-size:14px;"></i></div>
+              <div class="demand-info">
+                <div class="demand-name">CAN Fertiliser</div>
+                <div class="demand-sub">Top-dressing · 7 cane farms</div>
+              </div>
+              <div>
+                <div class="demand-qty">350 kg</div>
+                <div class="demand-farms">7 farms</div>
+              </div>
+            </div>
+            <div class="demand-item">
+              <div class="demand-icon dairy"><i class="ti ti-vaccine" style="font-size:14px;"></i></div>
+              <div class="demand-info">
+                <div class="demand-name">FMD Vaccine (booster)</div>
+                <div class="demand-sub">Dairy · Kiplagat + 3 others</div>
+              </div>
+              <div>
+                <div class="demand-qty">12 doses</div>
+                <div class="demand-farms">4 farms</div>
+              </div>
+            </div>
+            <div class="demand-item">
+              <div class="demand-icon cane"><i class="ti ti-spray" style="font-size:14px;"></i></div>
+              <div class="demand-info">
+                <div class="demand-name">Fall Armyworm Pesticide</div>
+                <div class="demand-sub">KMD alert response · Urgent</div>
+              </div>
+              <div>
+                <div class="demand-qty">18 L</div>
+                <div class="demand-farms">9 farms</div>
+              </div>
+            </div>
+            <div class="demand-item">
+              <div class="demand-icon dairy"><i class="ti ti-droplet" style="font-size:14px;"></i></div>
+              <div class="demand-info">
+                <div class="demand-name">Dairy Concentrate Feed</div>
+                <div class="demand-sub">Nutrition support · 5 herds</div>
+              </div>
+              <div>
+                <div class="demand-qty">200 kg</div>
+                <div class="demand-farms">5 farms</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TODAY'S VISIT LOG -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Today's Visit Log</div>
+            <div style="font-size:11.5px;color:var(--text-muted);">0 / 5 complete</div>
+          </div>
+          <div class="panel-body">
+            <div class="log-item">
+              <div class="log-dot pending"></div>
+              <div class="log-info">
+                <div class="log-name">Achieng Ouma</div>
+                <div class="log-action">Heat detection exam + CMT · Carry Oxytocin</div>
+                <div class="log-time">Scheduled 08:00 AM</div>
+              </div>
+              <div class="log-status pending">Pending</div>
+            </div>
+            <div class="log-item">
+              <div class="log-dot pending"></div>
+              <div class="log-info">
+                <div class="log-name">Wekesa Barasa</div>
+                <div class="log-action">Soil probe · Apply CAN 50 kg · Check ratoon</div>
+                <div class="log-time">Scheduled 10:00 AM</div>
+              </div>
+              <div class="log-status pending">Pending</div>
+            </div>
+            <div class="log-item">
+              <div class="log-dot pending"></div>
+              <div class="log-info">
+                <div class="log-name">Nafula Simiyu</div>
+                <div class="log-action">Visual smut inspection · Flag NEAR farms</div>
+                <div class="log-time">Scheduled 11:30 AM</div>
+              </div>
+              <div class="log-status pending">Pending</div>
+            </div>
+            <div class="log-item">
+              <div class="log-dot pending"></div>
+              <div class="log-info">
+                <div class="log-name">Kiplagat Rono</div>
+                <div class="log-action">FMD booster · Record herd weights</div>
+                <div class="log-time">Scheduled 13:30 PM</div>
+              </div>
+              <div class="log-status pending">Pending</div>
+            </div>
+            <div class="log-item">
+              <div class="log-dot pending"></div>
+              <div class="log-info">
+                <div class="log-name">Moraa Nyaboke</div>
+                <div class="log-action">Weeding check · CAN top-dress 30 kg</div>
+                <div class="log-time">Scheduled 15:00 PM</div>
+              </div>
+              <div class="log-status pending">Pending</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function sendRAG() {
+  const input = document.getElementById('ragInput');
+  const chat = document.getElementById('ragChat');
+  const text = input.value.trim();
+  if (!text) return;
+  const userMsg = document.createElement('div');
+  userMsg.className = 'rag-msg user';
+  userMsg.textContent = text;
+  chat.appendChild(userMsg);
+  input.value = '';
+
+  const responses = [
+    { text: "Based on Wekesa's ratoon stage (month 4) and current soil moisture reading, nitrogen top-dressing with CAN at 50 kg/acre is overdue by 6 days. Apply within the next 3 days before the rain window closes.", source: "KALRO Sugarcane Manual §7.3 · Wekesa subgraph" },
+    { text: "Sugarcane smut spreads via infected seed cane and wind. Recommend roguing visibly infected stalks on Nafula's plot and imposing a 200m seed-cane quarantine on NEAR farms for 2 weeks.", source: "KALRO Crop Protection §11.1 · Nafula subgraph" },
+    { text: "Moraa's cane is in the weeding window (months 2–3 post-planting). Manual weeding should precede any top-dress to avoid nutrient competition. Urea is an alternative if CAN stock runs low.", source: "KALRO Sugarcane Manual §5.2 · Moraa subgraph" },
+    { text: "FMD boosters for Kiplagat's herd are 14 days overdue per the vaccination calendar. Administer 2 ml subcutaneously per animal. Observe for 30 min post-injection before leaving the farm.", source: "KALRO Veterinary Manual §9.4 · Kiplagat subgraph" },
+  ];
+  const pick = responses[Math.floor(Math.random() * responses.length)];
+
+  setTimeout(() => {
+    const agentMsg = document.createElement('div');
+    agentMsg.className = 'rag-msg agent';
+    agentMsg.innerHTML = pick.text + `<div class="rag-source"><i class="ti ti-book" style="font-size:11px;"></i> ${pick.source}</div>`;
+    chat.appendChild(agentMsg);
+    chat.scrollTop = chat.scrollHeight;
+  }, 700);
+}
+document.getElementById('ragInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendRAG(); });
+</script>
+</body>
+</html>

@@ -7,7 +7,6 @@ export class CreateAgentDto {
   @ApiProperty() @IsEmail() email!: string;
   @ApiProperty({ minLength: 8 }) @IsString() @MinLength(8) password!: string;
   @ApiProperty() @IsString() county!: string;
-  @ApiProperty() @IsString() cooperative!: string;
   @ApiPropertyOptional({ enum: Role, default: Role.agent })
   @IsOptional()
   @IsEnum(Role)

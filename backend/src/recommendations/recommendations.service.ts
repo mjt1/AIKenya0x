@@ -29,8 +29,13 @@ export class RecommendationsService {
     return this.repo.listForAgent(agentId, status);
   }
 
-  async updateStatus(agentId: string, id: string, status: RecommendationStatus) {
-    const updated = await this.repo.updateStatus(agentId, id, status);
+  async updateStatus(
+    agentId: string,
+    id: string,
+    status: RecommendationStatus,
+    note?: string,
+  ) {
+    const updated = await this.repo.updateStatus(agentId, id, status, note);
     if (!updated) throw new NotFoundException('Recommendation not found');
     return updated;
   }

@@ -1,17 +1,8 @@
-import {
-  Body,
-  Controller,
-  ForbiddenException,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -97,30 +88,16 @@ export class FarmersController {
   }
 
   @Post(':id/reassign')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin)
   @ApiOperation({
-    summary:
-      'Reassign a farmer to a different agent. Admin: any. Supervisor: same cooperative only.',
+    summary: 'Reassign a farmer to a different agent. Admin only.',
   })
   @ApiOkResponse({ type: ReassignFarmerResponseDto })
   @ApiNotFoundResponse({ description: 'Farmer or target agent not found' })
-  @ApiForbiddenResponse({
-    description: 'Supervisor scope violation (cross-cooperative reassignment).',
-  })
   async reassign(
-    @CurrentAgent() me: AuthenticatedAgent,
     @Param('id') farmerId: string,
     @Body() dto: ReassignFarmerDto,
   ) {
-    const scope =
-      me.role === Role.supervisor
-        ? { cooperativeId: me.cooperativeId }
-        : { cooperativeId: null };
-    if (me.role === Role.supervisor && !scope.cooperativeId) {
-      throw new ForbiddenException(
-        'Supervisor account is not assigned to a cooperative',
-      );
-    }
-    return this.farmers.reassign(farmerId, dto.toAgentId, me.role, scope);
+    return this.farmers.reassign(farmerId, dto.toAgentId);
   }
 }

@@ -11,7 +11,6 @@ import {
 import { AgentsService } from '../../agents/agents.service';
 import { AdminAgentsService } from './admin-agents.service';
 import { CreateAgentDto } from '../dto/create-agent.dto';
-import { AssignCooperativeDto } from '../dto/assign-cooperative.dto';
 import { UpdateRoleDto } from '../../agents/dto/update-role.dto';
 import {
   AgentProfileDto,
@@ -21,8 +20,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/types/rbac.types';
 
 /**
- * Admin-only agent + caseload management (US-17). Mirrors the supervisor
- * surface on `/agents` but with admin-wide reach and write operations.
+ * Admin-only agent + caseload management (US-17): platform-wide reach and
+ * write operations over agents.
  */
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -42,7 +41,7 @@ export class AdminAgentsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create an agent (admin, supervisor, or agent).' })
+  @ApiOperation({ summary: 'Create an agent (admin or agent).' })
   @ApiCreatedResponse({ type: PublicAgentDto })
   @ApiConflictResponse({ description: 'Email already registered' })
   create(@Body() dto: CreateAgentDto) {
@@ -63,13 +62,5 @@ export class AdminAgentsController {
   @ApiNotFoundResponse({ description: 'Agent not found' })
   updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
     return this.agents.updateRole(id, dto.role);
-  }
-
-  @Patch(':id/cooperative')
-  @ApiOperation({ summary: 'Reassign an agent to a different cooperative.' })
-  @ApiOkResponse({ type: PublicAgentDto })
-  @ApiNotFoundResponse({ description: 'Agent not found' })
-  assignCoop(@Param('id') id: string, @Body() dto: AssignCooperativeDto) {
-    return this.agents.assignCooperative(id, dto.cooperative, dto.county);
   }
 }

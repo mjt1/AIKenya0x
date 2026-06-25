@@ -17,12 +17,12 @@ _Suluhu — a farmer-intelligence copilot for extension agents. Scope: mixed **s
 # 1. Introduction
 
 ## 1.1 Purpose
-This document defines the product requirements for **Suluhu**, an AI-powered farmer-intelligence copilot for youth agricultural extension agents. Suluhu turns the scattered, unstructured field knowledge of an agent's caseload into a daily, ranked, explainable action plan, and aligns last-mile input supply with real demand. It is built for the DigiCow Africa brief and is **enterprise-agnostic by design**, with **sugarcane and dairy** as the first two supported enterprises (the deepest worked examples for the prototype).
+This document defines the product requirements for **Suluhu**, an AI-powered farmer-intelligence copilot for youth agricultural extension agents. Suluhu turns the scattered, unstructured field knowledge of an agent's caseload into a daily, ranked, explainable action plan. It is built for the DigiCow Africa brief and is **enterprise-agnostic by design**, with **sugarcane and dairy** as the first two supported enterprises (the deepest worked examples for the prototype).
 
 ## 1.2 Scope
 **In scope (prototype):**
 - A single agent's workflow across a caseload of ~50 mixed sugarcane/dairy smallholders.
-- The core loop: **Capture → Prioritise → Tailor → Grounded Q&A → Follow-up → Demand Aggregation.**
+- The core loop: **Capture → Prioritise → Tailor → Grounded Q&A → Follow-up.**
 - A Neo4j graph backbone, a backend API (with Swagger/OpenAPI), an AI inference service, and a mobile-responsive agent web app with offline capture.
 
 **Out of scope (prototype):**
@@ -69,7 +69,7 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
 - **Acceptance criteria:**
   - Agent can record a visit against a farmer, selecting the relevant enterprise(s).
   - Free-text notes are auto-structured into typed fields (observation, issue, advice) via the AI service.
-  - Capture works offline and queues for sync (see Feature 9).
+  - Capture works offline and queues for sync (see Feature 8).
 
 ### Feature 4 — Prioritisation Queue (Triage)
 - **Description:** A daily ranked queue of which farmers to visit, combining dairy and sugarcane risk signals into one score with human-readable reasons.
@@ -102,26 +102,30 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
   - Agent can mark a recommendation as done/partly done/not done, with a note.
   - Logging an outcome updates the farmer's record and feeds the next prioritisation cycle.
 
-### Feature 8 — Input-Demand Aggregation
-- **Description:** Consolidate upcoming input needs across the caseload to align last-mile supply.
-- **User stories:** US-14
-- **Acceptance criteria:**
-  - The system aggregates projected inputs (fertiliser, seed cane, feed, vaccines, AI straws) across all farmers over a chosen horizon.
-  - Output is grouped by input type with quantities and the farmers driving demand.
-
-### Feature 9 — Offline Capture & Sync
+### Feature 8 — Offline Capture & Sync
 - **Description:** Full capture and read access offline, with delayed sync when connectivity returns.
 - **User stories:** US-15
 - **Acceptance criteria:**
   - Agent can register farmers, capture visits, and view cached caseload data with no network.
   - Queued changes sync automatically and resolve without data loss when back online.
 
-### Feature 10 — Risk Propagation Alerts
+### Feature 9 — Risk Propagation Alerts
 - **Description:** Flag neighbouring farms when a contagious issue is recorded nearby (e.g., sugarcane smut, a notifiable dairy disease).
 - **User stories:** US-16
 - **Acceptance criteria:**
   - Recording a contagious issue raises an alert for farms within the defined proximity.
   - Affected farmers are boosted in the prioritisation queue with a clear reason.
+
+### Feature 10 — Caseload Map &amp; Heatmap
+- **Description:** A geographic view of the agent's caseload — every farmer plotted at their location and colour-coded by priority band, with a **Pins ⇆ Heatmap** toggle that reveals clusters of urgency and contagious-issue hotspots. It **reuses data the system already has** — the prioritisation score (Feature 4) and the farmer's GPS captured at registration (Feature 2) — so it adds visibility with **no new data collection**.
+- **User stories:** US-20
+- **Acceptance criteria:**
+  - The map plots every farmer in the caseload at their registered location, coloured by priority band (urgent / window-closing / routine).
+  - A **Pins ⇆ Heatmap** toggle switches between individual markers and a density layer weighted by score.
+  - Tapping a marker opens that farmer's detail (Feature 5).
+  - Contagious-issue clusters (e.g., the smut alert from Feature 9) are visually highlighted.
+  - A cooperative/supervisor variant aggregates across agents to show where attention is concentrated.
+  - Farmers missing a GPS location are listed separately rather than dropped from the view.
 
 ## 2.2 Admin / Cooperative Features
 
@@ -135,7 +139,7 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
 
 ### Feature 3 — Analytics & Insights
 - **User stories:** US-19
-- **Acceptance criteria:** Admin can view visit volumes, adoption rates, productivity trends, and aggregated input demand across agents.
+- **Acceptance criteria:** Admin can view visit volumes, adoption rates, and productivity trends across agents.
 
 ## 2.3 AI / Machine Learning Algorithms
 The AI service provides **stateless inference** only (it does not own the database). Capabilities:
@@ -146,7 +150,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 - **Prioritisation scoring** is computed in the backend as a deterministic Cypher rule for the prototype (clear path to a learned model later); the AI service may later host the learned scorer behind the same contract.
 
 ## 2.4 Pages
-**Agent pages:** Login · Daily Queue (home) · Farmer Detail (dual-enterprise) · Visit Capture · Advisory Chat · Input-Demand · Profile.
+**Agent pages:** Login · Daily Queue (home) · Caseload Map & Heatmap · Farmer Detail (dual-enterprise) · Visit Capture · Advisory Chat · Profile.
 **Admin pages:** Agents & Caseloads · Knowledge Base · Analytics Dashboard.
 **Additional pages:** Offline/sync status · Empty/error states · About.
 
@@ -183,9 +187,6 @@ The AI service provides **stateless inference** only (it does not own the databa
 **Follow-up**
 - **US-13** — As an agent, I want to log the outcome of advice, so adoption is tracked and priorities improve.
 
-**Demand**
-- **US-14** — As an agent/cooperative, I want aggregated input demand across the caseload, so supply is coordinated.
-
 **Offline**
 - **US-15** — As an agent, I want to capture and read data offline and sync later, because field connectivity is poor.
 
@@ -195,7 +196,10 @@ The AI service provides **stateless inference** only (it does not own the databa
 **Admin / cooperative**
 - **US-17** — As an admin, I want to manage agents and caseload assignments, so coverage is organised.
 - **US-18** — As an admin, I want to manage the knowledge base, so advisory answers stay accurate and cited.
-- **US-19** — As an admin, I want analytics across agents, so I can see adoption, productivity and demand.
+- **US-19** — As an admin, I want analytics across agents, so I can see adoption and productivity.
+
+**Caseload map & visibility**
+- **US-20** — As an agent (and cooperative supervisor), I want to see my caseload on a map/heatmap coloured by priority, so I can plan an efficient route and spot urgency and disease clusters at a glance.
 
 ---
 
@@ -209,7 +213,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 ## 4.2 Back-End
 - **Framework:** **NestJS (TypeScript).**
 - **Reasons:** structured, modular, and ships first-class OpenAPI/Swagger generation (`@nestjs/swagger`) — so the **Frontend contract is auto-published**; clean dependency injection for the Neo4j driver and the AI-service client.
-- **Responsibilities:** owns all Neo4j access (single writer), the prioritisation/aggregation Cypher, retrieval for GraphRAG, auth, sync, and orchestration of calls to the AI service.
+- **Responsibilities:** owns all Neo4j access (single writer), the prioritisation Cypher, retrieval for GraphRAG, auth, sync, and orchestration of calls to the AI service.
 - **Alternative:** Fastify + `@fastify/swagger` (lighter, still typed).
 
 ## 4.3 AI/ML Service
@@ -219,7 +223,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 
 ## 4.4 Database — Neo4j Graph Model
 - **Database:** **Neo4j (AuraDB free tier for the prototype)**, accessed by the backend via the official driver over Bolt. A **native vector index** stores manual-chunk embeddings for retrieval.
-- **Why a graph:** a single farmer's dual-enterprise relationships (crop + livestock + assets + visits + inputs + neighbours) are heterogeneous and highly connected — awkward in fixed relational tables, natural in a graph; the same Cypher query scores any enterprise type.
+- **Why a graph:** a single farmer's dual-enterprise relationships (crop + livestock + assets + visits + neighbours) are heterogeneous and highly connected — awkward in fixed relational tables, natural in a graph; the same Cypher query scores any enterprise type.
 
 **Core node labels (key properties):**
 - `Agent` (id, name, county, cooperative)
@@ -228,7 +232,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 - `Animal` (id, breed, lactationStage, lastBreedingDate) · `Field` (id, areaHa, variety, ratoonCycle, lastTopDressedAt)
 - `Visit` (id, date, agentId) · `Observation` (id, text, capturedAt)
 - `Issue` (id, category, severity, status) · `Action` (id, text) · `Input` (id, name, type, quantity)
-- `Supplier` (id, name) · `Zone` (id, name) · `Weather` (date, metrics)
+- `Zone` (id, name) · `Weather` (date, metrics)
 - `ManualChunk` (id, text, source, embedding) — knowledge base for GraphRAG
 
 **Core relationships:**
@@ -236,7 +240,6 @@ The AI service provides **stateless inference** only (it does not own the databa
 (:Agent)-[:MANAGES]->(:Farmer)-[:RUNS]->(:Enterprise)-[:HAS_ASSET]->(:Animal|:Field)
 (:Farmer)-[:HAD_VISIT]->(:Visit)-[:CAPTURED]->(:Observation)-[:FLAGS]->(:Issue)
 (:Issue)-[:RECOMMENDS]->(:Action)-[:NEEDS]->(:Input)
-(:Supplier)-[:SUPPLIES]->(:Input)
 (:Farmer)-[:IN]->(:Zone)<-[:FORECAST_FOR]-(:Weather)
 (:Farmer)-[:NEAR]->(:Farmer)                 // risk propagation
 (:Issue)-[:GROUNDED_IN]->(:ManualChunk)      // GraphRAG citation trail
@@ -258,7 +261,6 @@ The AI service provides **stateless inference** only (it does not own the databa
 4. **Tailor:** `GET /farmers/{id}/recommendations` composes action + input from the issue + rules.
 5. **Grounded Q&A:** `POST /advisory/ask` → Backend embeds the query (AI `/embed`), runs a Neo4j vector search for `ManualChunk`s + pulls the farmer subgraph → calls AI `/advisory` with that context → returns a cited answer.
 6. **Follow-up:** `POST /visits/{id}/outcome` updates the graph and the next score.
-7. **Aggregate:** `GET /demand` rolls up `NEEDS` relationships across the caseload.
 
 ---
 
@@ -276,5 +278,26 @@ The AI service provides **stateless inference** only (it does not own the databa
 - A raw visit capture flows through to a re-ranked next-day queue.
 - One queue ranks both sugarcane and dairy farmers with correct, readable reasons.
 - GraphRAG answers a sugarcane question and a dairy question, each cited from the right manual.
-- An aggregated input-demand view is produced for the caseload.
 - Capture works offline and syncs on reconnect.
+
+---
+
+# Appendix A — Feature Flow Diagrams (Eraser)
+
+Each feature's cross-service interaction is maintained as an editable **sequence diagram** in Eraser, showing exactly how Frontend → Backend → AI Service → Neo4j collaborate (including the previously-implicit recommendation-engine flow).
+
+**Eraser file (all diagrams, editable):** https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0
+
+| Feature | Stories | Diagram |
+|---|---|---|
+| Tailored Recommendation Engine | US-11 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=gVwY8YJAnHFA3ndPoJ0f&layout=canvas) |
+| Visit Capture | US-05, US-06 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=JLBmE8jN332jdLCAXBBd&layout=canvas) |
+| Prioritisation Queue / Triage | US-07, US-08, US-09 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=XTWtqsQL3xuv01t9i4_D&layout=canvas) |
+| GraphRAG Advisory | US-12 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=ZQgix39XJOubjZg9zXKP&layout=canvas) |
+| Knowledge-Base Ingestion | US-18 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=2prLlfacPlHwNaG0r5ve&layout=canvas) |
+| Follow-up & Re-prioritisation | US-13 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=CirmTSVK3fQ1gjbat2v6&layout=canvas) |
+| Offline Capture & Sync | US-15 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=DvWCsei_wAnZ0wo03zTx&layout=canvas) |
+| Risk Propagation Alerts | US-16 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=vaNZEr08e8k4jtTEUlxa&layout=canvas) |
+| Caseload Map &amp; Heatmap | US-20 | [open](https://app.eraser.io/workspace/Hukb7RLy5KXlNMebJSP0?diagram=pfSFL_iygvEQs6nVq7Jd&layout=canvas) |
+
+_Auth & Profile (US-01/02) and Farmer & Enterprise Registry (US-03/04) are standard CRUD flows and are omitted here; they can be added if reviewers want them._

@@ -62,7 +62,5 @@ export class ReassignFarmerResponseDto {
   @ApiProperty() farmerExists!: boolean;
   @ApiProperty() targetAgentExists!: boolean;
   @ApiProperty({ nullable: true, type: String }) fromAgentId!: string | null;
-  @ApiProperty({ nullable: true, type: String }) fromCooperativeId!: string | null;
-  @ApiProperty({ nullable: true, type: String }) toCooperativeId!: string | null;
-  @ApiProperty({ required: false }) movedAt?: string;
+  @ApiProperty({ required: false }) reassignedAt?: string;
 }

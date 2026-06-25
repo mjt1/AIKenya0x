@@ -83,7 +83,8 @@ export class RecommendationsController {
 
   @Patch(':id/status')
   @ApiOperation({
-    summary: 'Mark a recommendation done / dismissed / snoozed / pending.',
+    summary:
+      'Record a recommendation outcome: done / partly_done / not_done / dismissed / snoozed / pending, with an optional free-text outcome note.',
   })
   @ApiOkResponse({ type: RecommendationDto })
   @ApiNotFoundResponse({ description: 'Recommendation not found' })
@@ -92,6 +93,6 @@ export class RecommendationsController {
     @Param('id') id: string,
     @Body() dto: UpdateRecommendationStatusDto,
   ) {
-    return this.recommendations.updateStatus(agent.id, id, dto.status);
+    return this.recommendations.updateStatus(agent.id, id, dto.status, dto.note);
   }
 }

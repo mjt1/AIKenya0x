@@ -1,8 +1,11 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { FarmersRepository } from '../repository/farmers.repository';
 import type { CreateFarmerDto, EnterpriseInput } from './dto/create-farmer.dto';
 import type { UpdateFarmerDto } from './dto/update-farmer.dto';
-import { Role } from '../common/types/rbac.types';
 
 @Injectable()
 export class FarmersService {
@@ -72,27 +75,13 @@ export class FarmersService {
     }
   }
 
-  async reassign(
-    farmerId: string,
-    toAgentId: string,
-    callerRole: Role,
-    scope: { cooperativeId: string | null },
-  ) {
+  async reassign(farmerId: string, toAgentId: string) {
     const preview = await this.repo.reassignPreview(farmerId, toAgentId);
     if (!preview.farmerExists) {
       throw new NotFoundException('Farmer not found');
     }
     if (!preview.targetAgentExists) {
       throw new NotFoundException('Target agent not found');
-    }
-    if (
-      callerRole === Role.supervisor &&
-      (preview.fromCooperativeId !== scope.cooperativeId ||
-        preview.toCooperativeId !== scope.cooperativeId)
-    ) {
-      throw new ForbiddenException(
-        'Supervisors may only reassign farmers within their cooperative',
-      );
     }
     const result = await this.repo.reassign(farmerId, toAgentId);
     return { status: 'ok' as const, ...preview, ...result };

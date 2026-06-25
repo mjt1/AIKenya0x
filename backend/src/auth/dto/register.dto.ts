@@ -18,8 +18,4 @@ export class RegisterDto {
   @ApiProperty({ example: 'Kakamega' })
   @IsString()
   county!: string;
-
-  @ApiProperty({ example: 'Mumias Sugar Cooperative' })
-  @IsString()
-  cooperative!: string;
 }

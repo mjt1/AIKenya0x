@@ -10,6 +10,8 @@ export type RecommendationKind = (typeof RECOMMENDATION_KINDS)[number];
 export const RECOMMENDATION_STATUSES = [
   'pending',
   'done',
+  'partly_done',
+  'not_done',
   'dismissed',
   'snoozed',
 ] as const;
@@ -37,6 +39,7 @@ export interface Recommendation {
   rationale: string;
   priority: number;
   status: RecommendationStatus;
+  note: string | null;
   dedupeKey: string;
   createdAt: string;
   updatedAt: string;

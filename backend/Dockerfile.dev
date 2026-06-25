@@ -1,0 +1,20 @@
+# ── Backend — Development ──────────────────────────────────────────────────────
+# Hot-reloads via `nest start --watch` using the host source tree mounted as a volume.
+# No multi-stage build needed; node_modules are installed inside the container on startup.
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching.
+# node_modules will be overridden by the volume mount when running locally,
+# but this layer is used as a base when the volume is empty on first boot.
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --non-interactive
+
+# Copy source — in dev the whole repo root is mounted over this anyway
+COPY . .
+
+EXPOSE 8080
+
+CMD ["yarn", "start:dev"]

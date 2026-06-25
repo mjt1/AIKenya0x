@@ -8,7 +8,6 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
 import { AgentsService } from '../agents/agents.service';
 import { toPublic } from '../agents/agent.entity';
-import { CooperativesRepository } from '../repository/cooperatives.repository';
 import { Role } from '../common/types/rbac.types';
 import type { RegisterDto } from './dto/register.dto';
 import type { LoginDto } from './dto/login.dto';
@@ -17,7 +16,6 @@ import type { LoginDto } from './dto/login.dto';
 export class AuthService {
   constructor(
     private readonly agents: AgentsService,
-    private readonly coops: CooperativesRepository,
     private readonly jwt: JwtService,
   ) {}
 
@@ -30,16 +28,12 @@ export class AuthService {
     const totalAgents = await this.agents.countAll();
     const role = totalAgents === 0 ? Role.admin : Role.agent;
 
-    const coop = await this.coops.upsertByName(dto.cooperative, dto.county);
-
     const created = await this.agents.create({
       id: uuid(),
       name: dto.name,
       email: dto.email,
       passwordHash,
       county: dto.county,
-      cooperative: dto.cooperative,
-      cooperativeId: coop.id,
       role,
     });
     return this.sign(created);
@@ -59,8 +53,6 @@ export class AuthService {
       sub: agent.id,
       email: agent.email,
       county: agent.county,
-      cooperative: agent.cooperative,
-      cooperativeId: agent.cooperativeId,
       role: agent.role,
     });
     return { access_token, agent: publicAgent };

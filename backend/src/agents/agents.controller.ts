@@ -1,15 +1,6 @@
-import {
-  Body,
-  Controller,
-  ForbiddenException,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -19,10 +10,6 @@ import { AgentsService } from './agents.service';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/types/rbac.types';
-import {
-  CurrentAgent,
-  type AuthenticatedAgent,
-} from '../common/decorators/current-agent.decorator';
 import {
   AgentProfileDto,
   PublicAgentDto,
@@ -35,41 +22,20 @@ export class AgentsController {
   constructor(private readonly agents: AgentsService) {}
 
   @Get()
-  @Roles(Role.admin, Role.supervisor)
-  @ApiOperation({
-    summary: 'List agents. Admin: all. Supervisor: scoped to own cooperative.',
-  })
+  @Roles(Role.admin)
+  @ApiOperation({ summary: 'List all agents. Admin only.' })
   @ApiOkResponse({ type: PublicAgentDto, isArray: true })
-  @ApiForbiddenResponse({ description: 'Supervisor without cooperative scope.' })
-  async list(@CurrentAgent() me: AuthenticatedAgent) {
-    if (me.role === Role.admin) return this.agents.listAll();
-    if (!me.cooperativeId) {
-      throw new ForbiddenException(
-        'Supervisor account is not assigned to a cooperative',
-      );
-    }
-    return this.agents.listByCooperative(me.cooperativeId);
+  list() {
+    return this.agents.listAll();
   }
 
   @Get(':id')
-  @Roles(Role.admin, Role.supervisor)
-  @ApiOperation({ summary: 'Get an agent profile + caseload size.' })
+  @Roles(Role.admin)
+  @ApiOperation({ summary: 'Get an agent profile + caseload size. Admin only.' })
   @ApiOkResponse({ type: AgentProfileDto })
   @ApiNotFoundResponse({ description: 'Agent not found' })
-  @ApiForbiddenResponse({ description: 'Agent is outside your cooperative.' })
-  async findOne(
-    @CurrentAgent() me: AuthenticatedAgent,
-    @Param('id') id: string,
-  ) {
-    const profile = await this.agents.profile(id);
-    if (
-      me.role === Role.supervisor &&
-      profile.agent.cooperativeId !== me.cooperativeId
-    ) {
-      throw new ForbiddenException('Agent is in another cooperative');
-    }
-    if (!profile) throw new NotFoundException('Agent not found');
-    return profile;
+  findOne(@Param('id') id: string) {
+    return this.agents.profile(id);
   }
 
   @Patch(':id/role')

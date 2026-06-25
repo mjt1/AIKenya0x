@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Suluhu / "AgriLink Unified" design tokens
+   Source of truth: DESIGN.md (forest-green, Inter, light dashboard)
+   ============================================================ */
+@theme {
+  /* Surfaces */
+  --color-app: #f6f8fb; /* application background */
+  --color-surface: #ffffff; /* cards / panels */
+  --color-surface-muted: #eff4ff; /* subtle fills, hovered rows */
+  --color-surface-sunken: #e5eeff; /* insets */
+
+  /* Text */
+  --color-foreground: #0b1c30; /* primary text (on-surface) */
+  --color-muted: #5b6470; /* secondary text */
+  --color-faint: #8a93a0; /* tertiary / placeholder */
+
+  /* Lines */
+  --color-outline: #e2e8f0; /* hairline borders */
+  --color-outline-strong: #cbd5e1;
+
+  /* Brand — "Forest Depth" */
+  --color-primary: #1f6c3a; /* primary actions, links, active */
+  --color-primary-hover: #18562e;
+  --color-primary-dark: #07371b; /* sidebar / brand panel */
+  --color-primary-darker: #052e16;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #dcfce7;
+  --color-on-primary-container: #14532d;
+
+  /* Semantic / status */
+  --color-success: #1f6c3a;
+  --color-success-surface: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-surface: #fef3c7;
+  --color-danger: #ba1a1a;
+  --color-danger-surface: #ffe2de;
+  --color-on-danger: #ffffff;
+
+  /* Priority bands (queue / map, later slices) */
+  --color-urgent: #ba1a1a;
+  --color-window: #b45309;
+  --color-routine: #1f6c3a;
+
+  /* Radius */
+  --radius-card: 0.5rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-app);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

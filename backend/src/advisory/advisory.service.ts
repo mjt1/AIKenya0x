@@ -115,11 +115,8 @@ export class AdvisoryService {
     const where: string[] = [];
     if (agent.role === Role.agent) {
       where.push(`EXISTS { MATCH (:Agent {id: $agentId})-[:MANAGES]->(f) }`);
-    } else if (agent.role === Role.supervisor && agent.cooperativeId) {
-      where.push(
-        `EXISTS { MATCH (c:Cooperative {id: $cooperativeId})<-[:BELONGS_TO]-(:Agent)-[:MANAGES]->(f) }`,
-      );
     }
+    // admin: unscoped (can query any farmer subgraph)
     const cypher =
       `MATCH (f:Farmer {id: $farmerId})
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -135,7 +132,6 @@ export class AdvisoryService {
     const records = await this.neo4j.read(cypher, {
       farmerId,
       agentId: agent.id,
-      cooperativeId: agent.cooperativeId,
     });
     if (records.length === 0) return null;
     const r = records[0];

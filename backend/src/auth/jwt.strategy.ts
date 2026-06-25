@@ -11,8 +11,6 @@ interface JwtPayload {
   sub: string;
   email: string;
   county: string;
-  cooperative: string;
-  cooperativeId: string | null;
   role: Role;
 }
 
@@ -34,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!agent || agent.id !== payload.sub) {
       throw new UnauthorizedException('Token no longer valid');
     }
-    // Trust DB values over JWT in case role/coop changed mid-token.
+    // Trust DB values over the JWT in case the role changed mid-token.
     return toPublic(agent);
   }
 }

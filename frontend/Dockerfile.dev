@@ -1,0 +1,20 @@
+# ── Frontend — Development ─────────────────────────────────────────────────────
+# Runs `next dev` with the host source tree mounted as a volume for HMR.
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching.
+COPY package.json yarn.lock ./
+RUN yarn install -D lightningcss-linux-arm64-musl
+RUN yarn install --frozen-lockfile --non-interactive
+
+COPY . .
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3000
+
+CMD ["yarn", "dev"]

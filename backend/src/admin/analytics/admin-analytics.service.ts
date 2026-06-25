@@ -16,25 +16,23 @@ export class AdminAnalyticsService {
     const [r] = await this.neo4j.read(
       `OPTIONAL MATCH (a:Agent)
        WITH count(DISTINCT a) AS totalAgents
-       OPTIONAL MATCH (c:Cooperative)
-       WITH totalAgents, count(DISTINCT c) AS totalCooperatives
        OPTIONAL MATCH (f:Farmer)
-       WITH totalAgents, totalCooperatives, count(DISTINCT f) AS totalFarmers
+       WITH totalAgents, count(DISTINCT f) AS totalFarmers
        OPTIONAL MATCH (v:Visit)
-       WITH totalAgents, totalCooperatives, totalFarmers,
+       WITH totalAgents, totalFarmers,
             count(DISTINCT v) AS totalVisits,
             count(DISTINCT CASE WHEN v.date >= datetime() - duration({days: 7})
                                 THEN v END) AS visitsThisWeek,
             count(DISTINCT CASE WHEN v.date >= datetime() - duration({days: 30})
                                 THEN v END) AS visitsThisMonth
        OPTIONAL MATCH (r:Recommendation)
-       WITH totalAgents, totalCooperatives, totalFarmers,
+       WITH totalAgents, totalFarmers,
             totalVisits, visitsThisWeek, visitsThisMonth,
             count(DISTINCT r) AS totalRecommendations,
             count(DISTINCT CASE WHEN r.status = 'accepted' THEN r END) AS recsAccepted,
             count(DISTINCT CASE WHEN r.status = 'applied'  THEN r END) AS recsApplied
        OPTIONAL MATCH (d:KnowledgeDocument)
-       RETURN totalAgents, totalCooperatives, totalFarmers,
+       RETURN totalAgents, totalFarmers,
               totalVisits, visitsThisWeek, visitsThisMonth,
               totalRecommendations, recsAccepted, recsApplied,
               count(DISTINCT d) AS totalKbDocuments`,
@@ -44,7 +42,6 @@ export class AdminAnalyticsService {
     const recsApplied = toNum(r.get('recsApplied'));
     return {
       totalAgents: toNum(r.get('totalAgents')),
-      totalCooperatives: toNum(r.get('totalCooperatives')),
       totalFarmers: toNum(r.get('totalFarmers')),
       totalVisits: toNum(r.get('totalVisits')),
       visitsThisWeek: toNum(r.get('visitsThisWeek')),
@@ -66,7 +63,7 @@ export class AdminAnalyticsService {
             count(DISTINCT CASE WHEN v.date >= datetime() - duration({days: 30})
                                 THEN v END) AS visitsLast30d
        RETURN a.id AS id, a.name AS name, a.email AS email,
-              a.cooperative AS cooperative, a.role AS role,
+              a.role AS role,
               farmers, visits, visitsLast30d
        ORDER BY farmers DESC, name ASC`,
     );
@@ -74,7 +71,6 @@ export class AdminAnalyticsService {
       id: r.get('id'),
       name: r.get('name'),
       email: r.get('email'),
-      cooperative: r.get('cooperative'),
       role: r.get('role'),
       caseloadSize: toNum(r.get('farmers')),
       totalVisits: toNum(r.get('visits')),

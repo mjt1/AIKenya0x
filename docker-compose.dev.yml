@@ -1,0 +1,81 @@
+services:
+  # ── AI Service — unchanged in dev (Python reload handled by uvicorn --reload) ─
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: suluhu-ai-dev
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./ai/.env
+    environment:
+      - TRANSFORMERS_CACHE=/app/.cache/huggingface
+    volumes:
+      - ai_model_cache:/app/.cache/huggingface
+      # Mount source for live reload (uvicorn --reload watches /app/app)
+      - ./ai/app:/app/app
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8001",
+        "--reload",
+        "--log-level",
+        "debug",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - suluhu
+
+  # ── Backend — NestJS watch mode ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: suluhu-backend-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      - AI_SERVICE_URL=http://ai:8001
+      - NODE_ENV=development
+    volumes:
+      # Mount host source; node_modules stay in the container layer
+      - ./backend/src:/app/src
+      - ./backend/test:/app/test
+    depends_on:
+      ai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - suluhu
+
+volumes:
+  ai_model_cache:
+
+networks:
+  suluhu:
+    driver: bridge
