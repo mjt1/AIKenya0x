@@ -21,7 +21,6 @@ const NAV: NavItem[] = [
   { label: "Farmers", href: "/farmers", ready: true },
   { label: "Advisory", href: "/advisory", ready: true },
   { label: "Caseload Map", href: "/map", ready: true },
-  { label: "Input Demand", href: "/demand" },
   { label: "Profile", href: "/profile", ready: true },
 ];
 
@@ -73,7 +72,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
-          <UserChip name={agent?.name} county={agent?.county} onLogout={logout} />
+          <UserChip
+            name={agent?.name}
+            county={agent?.county}
+            onLogout={logout}
+          />
         </div>
       </aside>
 
