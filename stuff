@@ -1,6 +1,0 @@
-❌ Remaining — agent features
-Feature	Stories	Notes
-Input-Demand Aggregation	US-14	Not built. Named demo success metric. Need to verify the endpoint (likely under analytics).
-Offline Capture & Sync (PWA)	US-15	Not built — we're online-only. Named demo success metric. Service worker + IndexedDB + the visitId idempotency the backend already supports.
-Caseload Map & Heatmap	US-20	Not built. High visual impact; we already have GPS + priority bands to drive it.
-Risk Propagation Alerts	US-16
