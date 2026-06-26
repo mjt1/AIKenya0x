@@ -24,6 +24,11 @@ export class FarmersService {
     return this.repo.listForAgent(agentId);
   }
 
+  /** Caseload cards enriched for the map tooltip. */
+  mapSummary(agentId: string) {
+    return this.repo.mapSummaryForAgent(agentId);
+  }
+
   async findOne(agentId: string, farmerId: string) {
     const farmer = await this.repo.findOneForAgent(agentId, farmerId);
     if (!farmer) throw new NotFoundException('Farmer not found');

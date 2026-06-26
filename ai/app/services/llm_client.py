@@ -136,24 +136,35 @@ class LLMClient:
         )
 
 
-# ── JSON cleanup helpers ───────────────────────────────────────────────────────
+# ── JSON cleanup helpers ──────────────────────────────────────────────
 
 def _parse_json_response(raw: str) -> dict[str, Any]:
     """
-    LLMs sometimes wrap JSON in ```json ... ``` fences or add a preamble.
-    This strips them and parses cleanly.
+    Normalise a model response down to a parsed JSON dict.
+
+    Handles three things LLMs do that break json.loads:
+      1. Reasoning models (Qwen3, DeepSeek-R1, ...) prepend a
+         <think>...</think> chain-of-thought before the answer.
+      2. Models wrap JSON in ```json ... ``` fences.
+      3. Models add a sentence of preamble before/after the object.
     """
-    # Strip markdown code fences
-    cleaned = re.sub(r"```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+    # 1. Drop any <think>...</think> reasoning block(s) (non-greedy, any case).
+    cleaned = re.sub(r"<think>[\s\S]*?</think>", "", raw, flags=re.IGNORECASE)
+    # A reasoning model can also emit an *unclosed* <think> (truncated before it
+    # closed) followed by nothing useful; strip a leading open tag defensively.
+    cleaned = re.sub(r"^\s*<think>", "", cleaned, flags=re.IGNORECASE).strip()
+
+    # 2. Strip markdown code fences.
+    cleaned = re.sub(r"```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.replace("```", "").strip()
 
-    # Try direct parse first
+    # 3a. Try direct parse first.
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # Attempt to extract first JSON object or array
+    # 3b. Attempt to extract the first JSON object or array.
     match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", cleaned)
     if match:
         try:

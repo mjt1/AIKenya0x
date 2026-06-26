@@ -29,17 +29,17 @@ export class AdminAnalyticsService {
        WITH totalAgents, totalFarmers,
             totalVisits, visitsThisWeek, visitsThisMonth,
             count(DISTINCT r) AS totalRecommendations,
-            count(DISTINCT CASE WHEN r.status = 'accepted' THEN r END) AS recsAccepted,
-            count(DISTINCT CASE WHEN r.status = 'applied'  THEN r END) AS recsApplied
+            count(DISTINCT CASE WHEN r.status = 'done' THEN r END) AS recsDone,
+            count(DISTINCT CASE WHEN r.status = 'partly_done' THEN r END) AS recsPartlyDone
        OPTIONAL MATCH (d:KnowledgeDocument)
        RETURN totalAgents, totalFarmers,
               totalVisits, visitsThisWeek, visitsThisMonth,
-              totalRecommendations, recsAccepted, recsApplied,
+              totalRecommendations, recsDone, recsPartlyDone,
               count(DISTINCT d) AS totalKbDocuments`,
     );
     const totalRecs = toNum(r.get('totalRecommendations'));
-    const recsAccepted = toNum(r.get('recsAccepted'));
-    const recsApplied = toNum(r.get('recsApplied'));
+    const recsDone = toNum(r.get('recsDone'));
+    const recsPartlyDone = toNum(r.get('recsPartlyDone'));
     return {
       totalAgents: toNum(r.get('totalAgents')),
       totalFarmers: toNum(r.get('totalFarmers')),
@@ -47,9 +47,11 @@ export class AdminAnalyticsService {
       visitsThisWeek: toNum(r.get('visitsThisWeek')),
       visitsThisMonth: toNum(r.get('visitsThisMonth')),
       totalRecommendations: totalRecs,
-      recsAccepted,
-      recsApplied,
-      adoptionRate: totalRecs === 0 ? 0 : (recsApplied + recsAccepted) / totalRecs,
+      recsDone,
+      recsPartlyDone,
+      // Adoption = recommendations the agent acted on (fully or partly).
+      adoptionRate:
+        totalRecs === 0 ? 0 : (recsDone + recsPartlyDone) / totalRecs,
       totalKbDocuments: toNum(r.get('totalKbDocuments')),
     };
   }
@@ -75,19 +77,6 @@ export class AdminAnalyticsService {
       caseloadSize: toNum(r.get('farmers')),
       totalVisits: toNum(r.get('visits')),
       visitsLast30d: toNum(r.get('visitsLast30d')),
-    }));
-  }
-
-  async demandAggregate() {
-    const records = await this.neo4j.read(
-      `MATCH (:Issue)-[:RECOMMENDS]->(:Action)-[:NEEDS]->(i:Input)
-       RETURN i.name AS name, i.type AS type, sum(coalesce(i.quantity, 1)) AS quantity
-       ORDER BY quantity DESC LIMIT 50`,
-    );
-    return records.map((r) => ({
-      name: r.get('name'),
-      type: r.get('type'),
-      quantity: toNum(r.get('quantity')),
     }));
   }
 }

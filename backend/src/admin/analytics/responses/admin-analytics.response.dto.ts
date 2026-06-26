@@ -8,10 +8,12 @@ export class PlatformOverviewResponseDto {
   @ApiProperty() visitsThisWeek!: number;
   @ApiProperty() visitsThisMonth!: number;
   @ApiProperty() totalRecommendations!: number;
-  @ApiProperty() recsAccepted!: number;
-  @ApiProperty() recsApplied!: number;
+  @ApiProperty({ description: 'Recommendations resolved as done.' })
+  recsDone!: number;
+  @ApiProperty({ description: 'Recommendations resolved as partly done.' })
+  recsPartlyDone!: number;
   @ApiProperty({
-    description: '(recsAccepted + recsApplied) / totalRecommendations',
+    description: '(recsDone + recsPartlyDone) / totalRecommendations',
     minimum: 0,
     maximum: 1,
   })
@@ -27,10 +29,4 @@ export class AgentRollupRowDto {
   @ApiProperty() caseloadSize!: number;
   @ApiProperty() totalVisits!: number;
   @ApiProperty() visitsLast30d!: number;
-}
-
-export class DemandRowDto {
-  @ApiProperty() name!: string;
-  @ApiProperty({ example: 'fertiliser' }) type!: string;
-  @ApiProperty() quantity!: number;
 }

@@ -13,6 +13,7 @@ from app.services.embedder import EmbedderService
 from app.services.note_structurer import NoteStructurerService
 from app.services.classifier import ClassifierService
 from app.services.advisory import AdvisoryService
+from app.services.ranker import RankerService
 
 # ── Singletons (created at import time, shared across requests) ───────────────
 _llm_client = LLMClient()
@@ -20,9 +21,10 @@ _embedder = EmbedderService()
 _note_structurer = NoteStructurerService(llm=_llm_client)
 _classifier = ClassifierService(llm=_llm_client)
 _advisory = AdvisoryService(llm=_llm_client)
+_ranker = RankerService(llm=_llm_client)
 
 
-# ── Dependency providers ───────────────────────────────────────────────────────
+# ── Dependency providers ──────────────────────────────────────────────
 
 def get_llm() -> LLMClient:
     return _llm_client
@@ -42,3 +44,7 @@ def get_classifier() -> ClassifierService:
 
 def get_advisory_service() -> AdvisoryService:
     return _advisory
+
+
+def get_ranker() -> RankerService:
+    return _ranker

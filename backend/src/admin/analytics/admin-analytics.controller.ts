@@ -8,7 +8,6 @@ import {
 import { AdminAnalyticsService } from './admin-analytics.service';
 import {
   AgentRollupRowDto,
-  DemandRowDto,
   PlatformOverviewResponseDto,
 } from './responses/admin-analytics.response.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -39,12 +38,5 @@ export class AdminAnalyticsController {
   @ApiOkResponse({ type: AgentRollupRowDto, isArray: true })
   byAgent() {
     return this.svc.byAgent();
-  }
-
-  @Get('demand')
-  @ApiOperation({ summary: 'Aggregated input demand across all agents.' })
-  @ApiOkResponse({ type: DemandRowDto, isArray: true })
-  demand() {
-    return this.svc.demandAggregate();
   }
 }

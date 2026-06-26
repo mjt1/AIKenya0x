@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { serializeNeo4j } from '../neo4j/serialize';
 import {
   type CreateFarmerDto,
   type EnterpriseInput,
@@ -15,6 +16,36 @@ export interface FarmerRow {
   phone: string;
   lastVisitedAt: string | null;
   updatedAt?: string | null;
+}
+
+/**
+ * Per-farmer card for the caseload map tooltip (US — enhanced map pins).
+ * Aggregates the real signals we store: enterprise mix, recency, open issues
+ * and the latest field note. Priority/band still comes from the recommendation
+ * queue on the client.
+ */
+export interface FarmerMapSummary {
+  id: string;
+  name: string;
+  phone: string;
+  gps: string | null;
+  lastVisitedAt: string | null;
+  /** Distinct enterprise types this farmer runs, e.g. ['Dairy', 'Sugarcane']. */
+  enterprises: string[];
+  /** Count of open issues flagged across the farmer's visits. */
+  openIssueCount: number;
+  /** Most severe open issue, if any. */
+  topIssue: {
+    text: string;
+    severity: string | null;
+    contagious: boolean;
+  } | null;
+  /** Most recent observation captured on any visit, if any. */
+  latestObservation: {
+    kind: string;
+    text: string;
+    capturedAt: string | null;
+  } | null;
 }
 
 export interface CreateForAgentOptions {
@@ -142,6 +173,79 @@ export class FarmersRepository {
     return records.map((r) => this.farmerFrom(r.get('f').properties));
   }
 
+  /**
+   * Caseload cards for the map tooltip. One read aggregates each farmer's
+   * enterprise mix, latest observation and most-severe open issue.
+   */
+  async mapSummaryForAgent(agentId: string): Promise<FarmerMapSummary[]> {
+    const records = await this.neo4j.read(
+      `MATCH (:Agent {id: $agentId})-[:MANAGES]->(f:Farmer)
+       CALL { WITH f
+         OPTIONAL MATCH (f)-[:RUNS]->(e:Enterprise)
+         RETURN collect(DISTINCT e.type) AS enterprises
+       }
+       CALL { WITH f
+         OPTIONAL MATCH (f)-[:HAD_VISIT]->(:Visit)-[:CAPTURED]->(o:Observation)
+         WITH o ORDER BY o.capturedAt DESC LIMIT 1
+         RETURN o AS latestObs
+       }
+       CALL { WITH f
+         OPTIONAL MATCH (f)-[:HAD_VISIT]->(:Visit)-[:CAPTURED]->(:Observation)-[:FLAGS]->(i:Issue)
+         WHERE i.status = 'open'
+         WITH i, CASE i.severity
+                   WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0
+                 END AS rank
+         ORDER BY rank DESC, i.contagious DESC
+         RETURN collect(i) AS issues
+       }
+       RETURN f.id AS id, f.name AS name, f.phone AS phone, f.gps AS gps,
+              f.lastVisitedAt AS lastVisitedAt,
+              enterprises AS enterprises,
+              latestObs.kind AS obsKind,
+              latestObs.text AS obsText,
+              latestObs.capturedAt AS obsCapturedAt,
+              size(issues) AS openIssueCount,
+              head(issues).text AS issueText,
+              head(issues).severity AS issueSeverity,
+              head(issues).contagious AS issueContagious
+       ORDER BY coalesce(f.lastVisitedAt, datetime('1970-01-01T00:00:00Z')) ASC`,
+      { agentId },
+    );
+
+    const ts = (v: any): string | null => v?.toString?.() ?? null;
+
+    return records.map((r) => {
+      const obsText = r.get('obsText') as string | null;
+      const issueText = r.get('issueText') as string | null;
+      const enterprises = (
+        (r.get('enterprises') as (string | null)[] | null) ?? []
+      ).filter((t): t is string => Boolean(t));
+      return {
+        id: r.get('id') as string,
+        name: r.get('name') as string,
+        phone: r.get('phone') as string,
+        gps: (r.get('gps') as string | null) ?? null,
+        lastVisitedAt: ts(r.get('lastVisitedAt')),
+        enterprises,
+        openIssueCount: Number(r.get('openIssueCount') ?? 0),
+        topIssue: issueText
+          ? {
+              text: issueText,
+              severity: (r.get('issueSeverity') as string | null) ?? null,
+              contagious: Boolean(r.get('issueContagious')),
+            }
+          : null,
+        latestObservation: obsText
+          ? {
+              kind: (r.get('obsKind') as string | null) ?? 'observation',
+              text: obsText,
+              capturedAt: ts(r.get('obsCapturedAt')),
+            }
+          : null,
+      };
+    });
+  }
+
   async findOneForAgent(agentId: string, farmerId: string) {
     const records = await this.neo4j.read(
       `MATCH (:Agent {id: $agentId})-[:MANAGES]->(f:Farmer {id: $farmerId})
@@ -155,7 +259,9 @@ export class FarmersRepository {
     if (records.length === 0) return null;
     return {
       ...this.farmerFrom(records[0].get('f').properties),
-      enterprises: records[0].get('enterprises'),
+      // enterprises is a raw map projection (createdAt/updatedAt/asset ints are
+      // driver wrappers) — serialize so no temporal/integer object leaks out.
+      enterprises: serializeNeo4j(records[0].get('enterprises')),
     };
   }
 
@@ -211,7 +317,7 @@ export class FarmersRepository {
        ORDER BY coalesce(f.updatedAt, datetime('1970-01-01T00:00:00Z'))`,
       { agentId, since: since ?? null },
     );
-    return records.map((r) => this.serialize(r.get('farmer')));
+    return records.map((r) => serializeNeo4j(r.get('farmer')));
   }
 
   async enterpriseDelta(agentId: string, since?: string) {
@@ -222,7 +328,7 @@ export class FarmersRepository {
        ORDER BY coalesce(e.updatedAt, datetime('1970-01-01T00:00:00Z'))`,
       { agentId, since: since ?? null },
     );
-    return records.map((r) => this.serialize(r.get('enterprise')));
+    return records.map((r) => serializeNeo4j(r.get('enterprise')));
   }
 
   async caseloadCount(agentId: string): Promise<number> {
@@ -306,19 +412,5 @@ export class FarmersRepository {
       lastVisitedAt: p.lastVisitedAt?.toString?.() ?? p.lastVisitedAt ?? null,
       updatedAt: p.updatedAt?.toString?.() ?? p.updatedAt ?? null,
     };
-  }
-
-  private serialize(node: any): any {
-    if (node === null || node === undefined) return node;
-    if (Array.isArray(node)) return node.map((v) => this.serialize(v));
-    if (typeof node === 'object') {
-      if (typeof node.toString === 'function' && node.constructor?.name === 'DateTime') {
-        return node.toString();
-      }
-      return Object.fromEntries(
-        Object.entries(node).map(([k, v]) => [k, this.serialize(v)]),
-      );
-    }
-    return node;
   }
 }

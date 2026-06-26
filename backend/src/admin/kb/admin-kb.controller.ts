@@ -1,13 +1,19 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   Param,
   Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -16,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { AdminKbService } from './admin-kb.service';
 import { UploadDocumentDto } from './upload-document.dto';
+import { UploadDocumentFileDto } from './upload-document-file.dto';
 import {
   KbChunkDto,
   KbDeleteResponseDto,
@@ -28,6 +35,10 @@ import {
   CurrentAgent,
   type AuthenticatedAgent,
 } from '../../common/decorators/current-agent.decorator';
+import multer from 'multer';
+
+/** 20 MB cap — generous for a multi-hundred-page manual PDF, safe for memory. */
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 /**
  * US-18 — Knowledge-Base management. Admin uploads/curates reference
@@ -42,13 +53,54 @@ export class AdminKbController {
   constructor(private readonly kb: AdminKbService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Upload a reference doc; server chunks + embeds it.' })
+  @ApiOperation({
+    summary: 'Upload a reference doc; server chunks + embeds it.',
+  })
   @ApiCreatedResponse({ type: KbUploadResponseDto })
   upload(
     @CurrentAgent() admin: AuthenticatedAgent,
     @Body() dto: UploadDocumentDto,
   ) {
     return this.kb.upload(dto, admin.id);
+  }
+
+  @Post('file')
+  @ApiOperation({
+    summary:
+      'Upload a reference file (PDF or text); server extracts, chunks + embeds it.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'title', 'source'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'PDF or text file (.pdf, .txt, .md, .csv).',
+        },
+        title: { type: 'string' },
+        source: { type: 'string' },
+        enterprise: { type: 'string', enum: ['dairy', 'sugarcane'] },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: KbUploadResponseDto })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
+  uploadFile(
+    @CurrentAgent() admin: AuthenticatedAgent,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() meta: UploadDocumentFileDto,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'No file uploaded. Attach a PDF or text file under the "file" field.',
+      );
+    }
+    return this.kb.uploadFile(file, meta, admin.id);
   }
 
   @Get()

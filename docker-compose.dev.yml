@@ -61,6 +61,7 @@ services:
       # Mount host source; node_modules stay in the container layer
       - ./backend/src:/app/src
       - ./backend/test:/app/test
+      - ./backend/package.json:/app/package.json
     depends_on:
       ai:
         condition: service_healthy

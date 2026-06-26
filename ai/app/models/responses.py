@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from app.models.requests import EnterpriseType, Severity
 
 
-# ── Feature 1: Note Structuring ───────────────────────────────────────────────
+# ── Feature 1: Note Structuring ──────────────────────────────────────
 
 class StructuredIssue(BaseModel):
     text: str = Field(..., description="Human-readable description of the issue.")
@@ -42,7 +42,7 @@ class StructureNoteResponse(BaseModel):
     model_used: str | None = None
 
 
-# ── Feature 2: Issue Classification ──────────────────────────────────────────
+# ── Feature 2: Issue Classification ─────────────────────────────────
 
 class DairyCategoryEnum(str):
     """Documentary enum — actual values validated in classifier."""
@@ -77,7 +77,7 @@ class ClassifyResponse(BaseModel):
     model_used: str | None = None
 
 
-# ── Feature 3: Embeddings ─────────────────────────────────────────────────────
+# ── Feature 3: Embeddings ──────────────────────────────────────────
 
 class EmbedResponse(BaseModel):
     embeddings: list[list[float]] = Field(
@@ -89,7 +89,7 @@ class EmbedResponse(BaseModel):
     normalised: bool
 
 
-# ── Feature 4: Advisory (GraphRAG) ───────────────────────────────────────────
+# ── Feature 4: Advisory (GraphRAG) ─────────────────────────────────
 
 class CitedChunk(BaseModel):
     chunk_id: str
@@ -138,7 +138,37 @@ class AdvisoryResponse(BaseModel):
     model_used: str | None = None
 
 
-# ── Shared: Health & Error ────────────────────────────────────────────────────
+# ── Feature 5: Prioritisation Re-ranking ───────────────────────────────
+
+class RankedItem(BaseModel):
+    dedupe_key: str = Field(..., description="Echoes the candidate's dedupe_key.")
+    priority: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Final priority after the bounded adjustment.",
+    )
+    rationale: str = Field(
+        ...,
+        description="One-line, farmer-specific justification shown on the queue.",
+    )
+    confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Model confidence in this ranking decision.",
+    )
+
+
+class RankResponse(BaseModel):
+    ranked: list[RankedItem] = Field(
+        default=[],
+        description="One entry per input candidate, same dedupe_keys, in input order.",
+    )
+    model_used: str | None = None
+
+
+# ── Shared: Health & Error ────────────────────────────────────────
 
 class HealthResponse(BaseModel):
     status: str = "ok"

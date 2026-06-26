@@ -64,8 +64,12 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { body, auth = true, headers, ...rest } = options;
 
+  // FormData (file uploads) must go out untouched: don't JSON.stringify it,
+  // and don't set Content-Type — the browser adds the multipart boundary.
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
   const finalHeaders = new Headers(headers);
-  if (body !== undefined && !finalHeaders.has("Content-Type")) {
+  if (body !== undefined && !isFormData && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
   }
   if (auth) {
@@ -78,7 +82,12 @@ export async function apiFetch<T>(
     res = await fetch(`${API_BASE}${path}`, {
       ...rest,
       headers: finalHeaders,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { serializeNeo4j } from '../neo4j/serialize';
 
 export interface CreateVisitInput {
   visitId?: string;
@@ -11,6 +12,17 @@ export interface CreateVisitInput {
   observations: { kind: string; text: string }[];
   notes: string;
   clientUpdatedAt?: string;
+  /**
+   * AI-classified issues (from /structure-note). Each becomes an :Issue node
+   * linked from its matching kind='issue' Observation via FLAGS. Only created
+   * when the visit is newly created (not on idempotent replay).
+   */
+  issues?: {
+    text: string;
+    severity: string;
+    contagious: boolean;
+    enterprise: string;
+  }[];
 }
 
 export interface CreateVisitOutcome {
@@ -75,6 +87,39 @@ export class VisitsRepository {
       `MATCH (v:Visit {id: $visitId}) REMOVE v._created`,
       { visitId },
     );
+
+    // Create :Issue nodes for AI-classified issues, only on first creation so
+    // an idempotent replay does not duplicate them. Each Issue is linked from
+    // its matching kind='issue' Observation (same source text) via FLAGS.
+    if (created && input.issues && input.issues.length > 0) {
+      await this.neo4j.write(
+        `MATCH (v:Visit {id: $visitId})
+         UNWIND $issues AS iss
+           MERGE (issue:Issue {id: iss.id})
+             ON CREATE SET issue.text = iss.text, issue.severity = iss.severity,
+                           issue.contagious = iss.contagious,
+                           issue.enterprise = iss.enterprise,
+                           issue.status = 'open', issue.createdAt = datetime(),
+                           issue.updatedAt = datetime()
+           WITH v, iss, issue
+           OPTIONAL MATCH (v)-[:CAPTURED]->(obs:Observation {kind: 'issue'})
+             WHERE obs.text = iss.text
+           FOREACH (o IN CASE WHEN obs IS NULL THEN [] ELSE [obs] END |
+             MERGE (o)-[:FLAGS]->(issue)
+           )`,
+        {
+          visitId,
+          issues: input.issues.map((i) => ({
+            id: uuid(),
+            text: i.text,
+            severity: i.severity,
+            contagious: i.contagious,
+            enterprise: i.enterprise,
+          })),
+        },
+      );
+    }
+
     return {
       status: created ? 'applied' : 'duplicate',
       id: records[0].get('id'),
@@ -93,7 +138,7 @@ export class VisitsRepository {
        ORDER BY v.date DESC`,
       { agentId, farmerId },
     );
-    return records.map((r) => r.get('visit'));
+    return records.map((r) => serializeNeo4j(r.get('visit')));
   }
 
   async findOneForAgent(agentId: string, visitId: string) {
@@ -106,7 +151,7 @@ export class VisitsRepository {
        RETURN v { .*, farmer: f { .id, .name }, observations: observations, enterprises: enterprises } AS visit`,
       { agentId, visitId },
     );
-    return records.length === 0 ? null : records[0].get('visit');
+    return records.length === 0 ? null : serializeNeo4j(records[0].get('visit'));
   }
 
   async deltaForAgent(agentId: string, since?: string) {
@@ -119,7 +164,7 @@ export class VisitsRepository {
        ORDER BY coalesce(v.updatedAt, datetime('1970-01-01T00:00:00Z'))`,
       { agentId, since: since ?? null },
     );
-    return records.map((r) => r.get('visit'));
+    return records.map((r) => serializeNeo4j(r.get('visit')));
   }
 
   async observationDelta(agentId: string, since?: string) {
@@ -130,6 +175,6 @@ export class VisitsRepository {
        ORDER BY coalesce(o.updatedAt, datetime('1970-01-01T00:00:00Z'))`,
       { agentId, since: since ?? null },
     );
-    return records.map((r) => r.get('observation'));
+    return records.map((r) => serializeNeo4j(r.get('observation')));
   }
 }

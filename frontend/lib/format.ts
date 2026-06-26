@@ -32,6 +32,7 @@ const KIND_LABELS: Record<string, string> = {
   first_visit: "First visit",
   issue_followup: "Issue follow-up",
   advice_followup: "Advice follow-up",
+  risk_alert: "Risk alert",
 };
 
 /** Humanize a recommendation kind, e.g. "overdue_visit" -> "Overdue visit". */

@@ -31,6 +31,17 @@ export interface ChunkInput {
   ordinal: number;
 }
 
+/**
+ * Clamp a vector-search score into [0,1]. Neo4j normalises cosine scores to
+ * that range, but floating-point can nudge an exact match a hair past 1.0,
+ * and the AI service rejects similarity_score > 1 (Pydantic le=1.0).
+ */
+function clampScore(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
 @Injectable()
 export class KnowledgeRepository implements OnApplicationBootstrap {
   private readonly logger = new Logger(KnowledgeRepository.name);
@@ -149,19 +160,22 @@ export class KnowledgeRepository implements OnApplicationBootstrap {
     k: number,
     enterprise: string | null = null,
   ): Promise<ManualChunkHit[]> {
+    // NOTE: the Neo4j driver serialises JS numbers as Float, but
+    // db.index.vector.queryNodes and LIMIT require an INTEGER — so every use of
+    // $k is wrapped in toInteger() to avoid "Expected INTEGER, but was FLOAT".
     try {
       const records = await this.neo4j.read(
-        `CALL db.index.vector.queryNodes('manual_chunk_embedding', $k, $query)
+        `CALL db.index.vector.queryNodes('manual_chunk_embedding', toInteger($k), $query)
          YIELD node, score
          WHERE $enterprise IS NULL OR node.enterprise = $enterprise OR node.enterprise IS NULL
          RETURN node AS m, score
          ORDER BY score DESC
-         LIMIT $k`,
+         LIMIT toInteger($k)`,
         { query, k, enterprise },
       );
       return records.map((r) => ({
         ...this.chunkFrom(r.get('m').properties),
-        score: Number(r.get('score')),
+        score: clampScore(r.get('score')),
       }));
     } catch (err) {
       this.logger.warn(
@@ -170,7 +184,7 @@ export class KnowledgeRepository implements OnApplicationBootstrap {
       const records = await this.neo4j.read(
         `MATCH (m:ManualChunk)
          WHERE $enterprise IS NULL OR m.enterprise = $enterprise OR m.enterprise IS NULL
-         RETURN m ORDER BY m.updatedAt DESC LIMIT $k`,
+         RETURN m ORDER BY m.updatedAt DESC LIMIT toInteger($k)`,
         { k, enterprise },
       );
       return records.map((r) => ({

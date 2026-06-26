@@ -33,6 +33,7 @@ export const RECOMMENDATION_KINDS = [
   "first_visit",
   "issue_followup",
   "advice_followup",
+  "risk_alert",
 ] as const;
 export type RecommendationKind =
   | (typeof RECOMMENDATION_KINDS)[number]
@@ -189,13 +190,117 @@ export interface AdvisoryCitation {
   score: number;
 }
 
+export type AdvisoryConfidence = "HIGH" | "MEDIUM" | "LOW" | (string & {});
+
+/** A specific input the agent should carry on the next visit (US-11). */
+export interface AdvisoryInput {
+  name: string;
+  quantity?: string | null;
+  unit?: string | null;
+  notes?: string | null;
+}
+
 export interface AdvisoryAnswer {
   inquiryId: string;
   question: string;
   answer: string;
+  /** Model confidence in the grounded answer. */
+  confidence: AdvisoryConfidence;
   /** True when the assistant defers to a vet/agronomist (low confidence / high risk). */
   deferred: boolean;
+  /** Why a referral was advised (present when deferred). */
+  referralReason: string | null;
+  /** Ordered concrete steps for the agent (US-11). */
+  actionItems: string[];
+  /** Specific inputs to carry on the next visit (US-11). */
+  inputsNeeded: AdvisoryInput[];
   rationale: string | null;
   citations: AdvisoryCitation[];
   farmer: { id: string; name: string } | null;
+}
+
+/* ----------------------------------- admin ----------------------------------- */
+
+export interface CreateAgentInput {
+  name: string;
+  email: string;
+  password: string;
+  county: string;
+  role?: Role;
+}
+
+export interface UpdateAgentRoleInput {
+  id: string;
+  role: Role;
+}
+
+/** GET /admin/analytics/overview (US-19). */
+export interface AdminAnalyticsOverview {
+  totalAgents: number;
+  totalFarmers: number;
+  totalVisits: number;
+  visitsThisWeek: number;
+  visitsThisMonth: number;
+  totalRecommendations: number;
+  recsDone: number;
+  recsPartlyDone: number;
+  /** (recsDone + recsPartlyDone) / totalRecommendations, 0..1. */
+  adoptionRate: number;
+  totalKbDocuments: number;
+}
+
+/** GET /admin/analytics/agents (US-19). */
+export interface AdminAgentRollup {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  caseloadSize: number;
+  totalVisits: number;
+  visitsLast30d: number;
+}
+
+/* ------------------------------ knowledge base (US-18) ------------------------------ */
+
+export interface KbDocument {
+  id: string;
+  title: string;
+  source: string;
+  enterprise: string | null;
+  chunkCount: number;
+  createdAt: string | null;
+}
+
+export interface KbChunk {
+  id: string;
+  text: string;
+  source: string;
+  title: string | null;
+  enterprise: string | null;
+  ordinal: number;
+}
+
+export interface UploadDocumentInput {
+  title: string;
+  source: string;
+  text: string;
+  enterprise?: "dairy" | "sugarcane";
+}
+
+/** Multipart upload: the document body is the file itself (PDF or text). */
+export interface UploadDocumentFileInput {
+  file: File;
+  title: string;
+  source: string;
+  enterprise?: "dairy" | "sugarcane";
+}
+
+export interface KbUploadResult {
+  id: string;
+  chunkCount: number;
+}
+
+export interface KbDeleteResult {
+  id: string;
+  deletedChunks: number;
 }

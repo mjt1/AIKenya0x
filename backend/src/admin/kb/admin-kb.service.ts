@@ -1,14 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
+import pdf from 'pdf-parse';
 import {
   KnowledgeRepository,
   type ChunkInput,
 } from '../../repository/knowledge.repository';
 import { AiClientService } from '../../ai-client/ai-client.service';
 import type { UploadDocumentDto } from './upload-document.dto';
+import type { UploadDocumentFileDto } from './upload-document-file.dto';
 
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 120;
+/** Mirror of UploadDocumentDto's @MinLength(20) — reject near-empty extracts. */
+const MIN_TEXT_LENGTH = 20;
+
+/**
+ * Structural shape of an uploaded file we care about. Matches
+ * `Express.Multer.File` (buffer + mimetype + originalname) so the controller
+ * can pass a multer file straight through, while keeping this service free of
+ * an Express type dependency.
+ */
+export interface UploadedDocFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+}
 
 @Injectable()
 export class AdminKbService {
@@ -39,6 +59,43 @@ export class AdminKbService {
     return { id: documentId, chunkCount: chunks.length };
   }
 
+  /**
+   * US-18 — ingest an uploaded file. Extracts text (PDF via pdf-parse, or
+   * utf-8 for plain-text formats) then defers to {@link upload} for the
+   * chunk + embed pipeline. Lets admins feed a 100-page manual without
+   * pasting it.
+   */
+  async uploadFile(
+    file: UploadedDocFile,
+    meta: UploadDocumentFileDto,
+    uploadedBy: string,
+  ) {
+    let text: string;
+    try {
+      text = await extractText(file);
+    } catch {
+      throw new BadRequestException(
+        'Could not read that file. Upload a text-based PDF, .txt, .md, or .csv \u2014 scanned/image PDFs are not supported.',
+      );
+    }
+
+    if (text.length < MIN_TEXT_LENGTH) {
+      throw new BadRequestException(
+        'Extracted too little text from the file (a scanned or image-only PDF?). Paste the text instead, or upload a text-based file.',
+      );
+    }
+
+    return this.upload(
+      {
+        title: meta.title,
+        source: meta.source,
+        text,
+        enterprise: meta.enterprise,
+      },
+      uploadedBy,
+    );
+  }
+
   list() {
     return this.kb.listDocuments();
   }
@@ -55,6 +112,17 @@ export class AdminKbService {
     const removed = await this.kb.deleteDocument(documentId);
     return { id: documentId, deletedChunks: removed };
   }
+}
+
+/** Pull plain text out of an uploaded file. PDF -> pdf-parse, else utf-8. */
+async function extractText(file: UploadedDocFile): Promise<string> {
+  const name = (file.originalname ?? '').toLowerCase();
+  const isPdf = file.mimetype === 'application/pdf' || name.endsWith('.pdf');
+  if (isPdf) {
+    const parsed = await pdf(file.buffer);
+    return (parsed.text ?? '').trim();
+  }
+  return file.buffer.toString('utf-8').trim();
 }
 
 /** Greedy sentence-aware chunker with character overlap. */

@@ -12,6 +12,7 @@ import { VisitResult } from "@/components/capture/visit-result";
 import { useFarmers } from "@/hooks/queries/use-farmers";
 import { useFarmer } from "@/hooks/queries/use-farmer";
 import { useCreateVisit } from "@/hooks/mutations/use-create-visit";
+import { enqueueVisit } from "@/lib/offline/queue";
 import { ApiError } from "@/lib/api";
 import type { Visit } from "@/lib/types";
 
@@ -27,6 +28,7 @@ export function CaptureForm({ initialFarmerId }: { initialFarmerId?: string }) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Visit | null>(null);
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   // Default-select every enterprise once a farmer's detail loads.
   useEffect(() => {
@@ -39,6 +41,11 @@ export function CaptureForm({ initialFarmerId }: { initialFarmerId?: string }) {
     );
   }
 
+  const farmerName =
+    farmer.data?.name ??
+    farmers.data?.find((f) => f.id === farmerId)?.name ??
+    "the farmer";
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -46,13 +53,26 @@ export function CaptureForm({ initialFarmerId }: { initialFarmerId?: string }) {
     if (enterpriseIds.length === 0)
       return setError("Select at least one enterprise the visit covered.");
     if (!notes.trim()) return setError("Add a few notes from the visit.");
+
+    const input = { enterpriseIds, notes: notes.trim() };
+
+    // Offline: queue locally and confirm — the sync engine pushes on reconnect.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await enqueueVisit(farmerId, input, farmerName);
+      setQueuedOffline(true);
+      return;
+    }
+
     try {
-      const visit = await create.mutateAsync({
-        farmerId,
-        input: { enterpriseIds, notes: notes.trim() },
-      });
+      const visit = await create.mutateAsync({ farmerId, input });
       setResult(visit);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        // Network dropped mid-request — save offline instead of failing.
+        await enqueueVisit(farmerId, input, farmerName);
+        setQueuedOffline(true);
+        return;
+      }
       setError(
         err instanceof ApiError
           ? err.message
@@ -60,11 +80,6 @@ export function CaptureForm({ initialFarmerId }: { initialFarmerId?: string }) {
       );
     }
   }
-
-  const farmerName =
-    farmer.data?.name ??
-    farmers.data?.find((f) => f.id === farmerId)?.name ??
-    "the farmer";
 
   const noFarmers = !farmers.isPending && (farmers.data?.length ?? 0) === 0;
 
@@ -87,6 +102,25 @@ export function CaptureForm({ initialFarmerId }: { initialFarmerId?: string }) {
             setNotes("");
           }}
         />
+      ) : queuedOffline ? (
+        <div className="rounded-card border border-outline bg-surface px-4 py-12 text-center">
+          <Text variant="h3">Saved offline</Text>
+          <Text variant="muted" className="mt-1">
+            This visit is stored on your device and will sync automatically when
+            you&apos;re back online.
+          </Text>
+          <div className="mt-4">
+            <Button
+              size="sm"
+              onClick={() => {
+                setQueuedOffline(false);
+                setNotes("");
+              }}
+            >
+              Log another
+            </Button>
+          </div>
+        </div>
       ) : farmers.isError ? (
         <Text variant="muted">Couldn&apos;t load your caseload.</Text>
       ) : noFarmers ? (

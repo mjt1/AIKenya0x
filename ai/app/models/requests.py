@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-# ── Shared enums ──────────────────────────────────────────────────────────────
+# ── Shared enums ──────────────────────────────────────────────────────
 
 class EnterpriseType(str, Enum):
     DAIRY = "DAIRY"
@@ -26,7 +26,7 @@ class Severity(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-# ── Feature 1: Note Structuring ───────────────────────────────────────────────
+# ── Feature 1: Note Structuring ──────────────────────────────────────
 
 class StructureNoteRequest(BaseModel):
     """
@@ -55,7 +55,7 @@ class StructureNoteRequest(BaseModel):
     )
 
 
-# ── Feature 2: Issue Classification ──────────────────────────────────────────
+# ── Feature 2: Issue Classification ─────────────────────────────────
 
 class ClassifyRequest(BaseModel):
     """
@@ -83,7 +83,7 @@ class ClassifyRequest(BaseModel):
     )
 
 
-# ── Feature 3: Embeddings ─────────────────────────────────────────────────────
+# ── Feature 3: Embeddings ──────────────────────────────────────────
 
 class EmbedRequest(BaseModel):
     """
@@ -106,7 +106,7 @@ class EmbedRequest(BaseModel):
     )
 
 
-# ── Feature 4: Advisory (GraphRAG) ───────────────────────────────────────────
+# ── Feature 4: Advisory (GraphRAG) ─────────────────────────────────
 
 class ManualChunk(BaseModel):
     """A single retrieved knowledge-base chunk passed from the backend."""
@@ -199,4 +199,66 @@ class AdvisoryRequest(BaseModel):
     top_k_used: int = Field(
         default=5,
         description="Number of chunks the backend retrieved — metadata for confidence scoring.",
+    )
+
+
+# ── Feature 5: Prioritisation Re-ranking ───────────────────────────────
+
+class RankCandidate(BaseModel):
+    """A deterministic recommendation candidate the backend wants re-ranked."""
+
+    dedupe_key: str = Field(
+        ...,
+        description="Stable key '<kind>:<farmerId>'. Echo it back unchanged.",
+    )
+    kind: str = Field(
+        ...,
+        description="overdue_visit | first_visit | issue_followup | advice_followup | risk_alert",
+    )
+    farmer_id: str
+    farmer_name: str
+    reason: str = Field(
+        ...,
+        description="Rule-based, human-readable reason already computed by the backend.",
+    )
+    base_priority: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Deterministic Cypher priority (0-100). The anchor the model refines around.",
+    )
+    context: dict[str, Any] = Field(
+        default={},
+        description="Extra signals, e.g. {daysSinceVisit, observation, distanceM, sourceFarmer}.",
+    )
+
+
+class RankRequest(BaseModel):
+    """
+    POST /rank
+    Bounded re-rank: the model may nudge each candidate's priority within
+    +/- max_adjustment of its deterministic base and must return a specific,
+    farmer-grounded rationale. The backend re-clamps and falls back to the
+    deterministic order if this service is unavailable (PRD 2.3: the AI may host
+    the scorer behind the same contract).
+    """
+
+    candidates: list[RankCandidate] = Field(
+        ...,
+        min_length=0,
+        description="Deterministic candidates to re-rank. May be empty.",
+    )
+    agent_county: str | None = Field(
+        default=None,
+        description="Agent county for light geographic context.",
+    )
+    today: str | None = Field(
+        default=None,
+        description="ISO date the queue is generated for (context only).",
+    )
+    max_adjustment: int = Field(
+        default=15,
+        ge=0,
+        le=50,
+        description="Maximum points the model may move a base_priority up or down.",
     )

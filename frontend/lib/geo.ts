@@ -12,3 +12,8 @@ export function parseGps(gps: string | null | undefined): LatLng | null {
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   return { lat, lng };
 }
+
+/** Format coordinates into the backend's "lat,lng" string (5 dp ~= 1.1m). */
+export function formatGps(lat: number, lng: number, precision = 5): string {
+  return `${lat.toFixed(precision)},${lng.toFixed(precision)}`;
+}

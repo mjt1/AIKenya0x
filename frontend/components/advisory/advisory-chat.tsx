@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/input";
@@ -24,6 +24,13 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
   const [turns, setTurns] = useState<AdvisoryAnswer[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Keep the newest message in view, like a chat.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [turns.length, ask.isPending]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -46,8 +53,10 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
     }
   }
 
+  const selectedFarmerName = farmers.data?.find((f) => f.id === farmerId)?.name;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header>
         <Text variant="h1">Advisory</Text>
         <Text variant="muted" className="mt-1">
@@ -56,27 +65,35 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
         </Text>
       </header>
 
-      {turns.length === 0 && !ask.isPending ? (
-        <div className="rounded-card border border-outline bg-surface px-4 py-10 text-center">
-          <Text variant="h3">Ask anything agronomic or veterinary</Text>
-          <Text variant="muted" className="mx-auto mt-1 max-w-md">
-            e.g. &quot;What&apos;s the CAN top-dressing rate for ratoon cane?&quot;
-            or &quot;Cow off feed with low milk — what should I check?&quot;
-          </Text>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {turns.map((t) => (
-            <AdvisoryTurn key={t.inquiryId} answer={t} />
-          ))}
-          {ask.isPending ? (
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Spinner className="h-4 w-4 animate-spin" /> Thinking…
-            </div>
-          ) : null}
-        </div>
-      )}
+      {/* Message column — oldest at top, newest (and "thinking") at the bottom. */}
+      <div
+        ref={scrollRef}
+        className="h-[58vh] space-y-6 overflow-y-auto rounded-card border border-outline bg-surface p-4"
+      >
+        {turns.length === 0 && !ask.isPending ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <Text variant="h3">Ask anything agronomic or veterinary</Text>
+            <Text variant="muted" className="mx-auto mt-1 max-w-md">
+              e.g. &quot;What&apos;s the CAN top-dressing rate for ratoon
+              cane?&quot; or &quot;Cow off feed with low milk — what should I
+              check?&quot;
+            </Text>
+          </div>
+        ) : (
+          <>
+            {turns.map((t) => (
+              <AdvisoryTurn key={t.inquiryId} answer={t} />
+            ))}
+            {ask.isPending ? (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Spinner className="h-4 w-4 animate-spin" /> Thinking…
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
 
+      {/* Composer — pinned beneath the conversation. */}
       <form
         onSubmit={onSubmit}
         className="space-y-3 rounded-card border border-outline bg-surface p-4"
@@ -96,6 +113,11 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
             value={farmerId}
             onChange={(e) => setFarmerId(e.target.value)}
             disabled={farmers.isPending}
+            hint={
+              selectedFarmerName
+                ? `Grounded in ${selectedFarmerName}'s records`
+                : "Link a farmer to use their history"
+            }
           >
             <option value="">General — no farmer</option>
             {farmers.data?.map((f) => (
@@ -115,16 +137,19 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
           </SelectField>
         </div>
 
-        <Field
-          label="Question"
-          value={question}
-          placeholder="Ask a question…"
-          onChange={(e) => setQuestion(e.target.value)}
-        />
-
-        <Button type="submit" loading={ask.isPending}>
-          {ask.isPending ? "Asking…" : "Ask"}
-        </Button>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field
+              label="Question"
+              value={question}
+              placeholder="Ask a question…"
+              onChange={(e) => setQuestion(e.target.value)}
+            />
+          </div>
+          <Button type="submit" loading={ask.isPending}>
+            {ask.isPending ? "Asking…" : "Ask"}
+          </Button>
+        </div>
       </form>
     </div>
   );

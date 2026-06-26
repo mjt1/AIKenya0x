@@ -6,12 +6,14 @@ import Link from "next/link";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useFarmers } from "@/hooks/queries/use-farmers";
+import {
+  useCaseloadMapSummary,
+  type MapFarmerSummary,
+} from "@/hooks/queries/use-caseload-map-summary";
 import { useQueue } from "@/hooks/queries/use-queue";
 import { priorityBand, BAND_META, type PriorityBand } from "@/lib/priority";
 import { parseGps } from "@/lib/geo";
 import { cn } from "@/lib/utils";
-import type { FarmerListItem } from "@/lib/types";
 import type { MapPoint } from "@/components/map/caseload-map-canvas";
 
 // Leaflet needs `window`; load the canvas client-only.
@@ -33,21 +35,41 @@ const BAND_DOT: Record<PriorityBand, string> = {
   routine: "bg-routine",
 };
 
+interface RecRollup {
+  band: PriorityBand;
+  priority: number;
+  topReason: string | null;
+  topKind: string | null;
+  pendingCount: number;
+}
+
 export function CaseloadMap() {
-  const farmers = useFarmers();
+  const summary = useCaseloadMapSummary();
   const queue = useQueue();
   const [mode, setMode] = useState<"pins" | "heatmap">("pins");
 
-  // Each farmer's most urgent pending recommendation drives its colour.
-  const bandByFarmer = useMemo(() => {
-    const m = new Map<string, { band: PriorityBand; priority: number }>();
+  // Each farmer's recommendations: highest-priority one drives colour + the
+  // tooltip's "next action"; pending ones are counted.
+  const recByFarmer = useMemo(() => {
+    const m = new Map<string, RecRollup>();
     for (const r of queue.data ?? []) {
-      const cur = m.get(r.farmer.id);
-      if (!cur || r.priority > cur.priority) {
-        m.set(r.farmer.id, {
+      let cur = m.get(r.farmer.id);
+      if (!cur) {
+        cur = {
           band: priorityBand(r.priority),
           priority: r.priority,
-        });
+          topReason: r.reason ?? null,
+          topKind: r.kind ?? null,
+          pendingCount: 0,
+        };
+        m.set(r.farmer.id, cur);
+      }
+      if (r.status === "pending") cur.pendingCount += 1;
+      if (r.priority > cur.priority) {
+        cur.priority = r.priority;
+        cur.band = priorityBand(r.priority);
+        cur.topReason = r.reason ?? null;
+        cur.topKind = r.kind ?? null;
       }
     }
     return m;
@@ -55,25 +77,34 @@ export function CaseloadMap() {
 
   const { points, missing } = useMemo(() => {
     const pts: MapPoint[] = [];
-    const miss: FarmerListItem[] = [];
-    for (const f of farmers.data ?? []) {
+    const miss: MapFarmerSummary[] = [];
+    for (const f of summary.data ?? []) {
       const coords = parseGps(f.gps);
       if (!coords) {
         miss.push(f);
         continue;
       }
-      const b = bandByFarmer.get(f.id);
+      const rec = recByFarmer.get(f.id);
       pts.push({
         id: f.id,
         name: f.name,
         lat: coords.lat,
         lng: coords.lng,
-        band: b?.band ?? "routine",
-        priority: b?.priority ?? 0,
+        band: rec?.band ?? "routine",
+        priority: rec?.priority ?? 0,
+        phone: f.phone ?? null,
+        enterprises: f.enterprises ?? [],
+        lastVisitedAt: f.lastVisitedAt,
+        pendingCount: rec?.pendingCount ?? 0,
+        topRecReason: rec?.topReason ?? null,
+        topRecKind: rec?.topKind ?? null,
+        openIssueCount: f.openIssueCount,
+        topIssue: f.topIssue,
+        latestObservation: f.latestObservation,
       });
     }
     return { points: pts, missing: miss };
-  }, [farmers.data, bandByFarmer]);
+  }, [summary.data, recByFarmer]);
 
   return (
     <div className="space-y-6">
@@ -82,7 +113,7 @@ export function CaseloadMap() {
           <Text variant="h1">Caseload map</Text>
           <Text variant="muted" className="mt-1">
             {points.length} farmer{points.length === 1 ? "" : "s"} mapped
-            {missing.length ? ` · ${missing.length} without GPS` : ""}.
+            {missing.length ? ` \u00b7 ${missing.length} without GPS` : ""}.
           </Text>
         </div>
         <div className="inline-flex overflow-hidden rounded-md border border-outline-strong">
@@ -122,15 +153,15 @@ export function CaseloadMap() {
         ))}
       </div>
 
-      {farmers.isPending ? (
+      {summary.isPending ? (
         <div className="flex h-[60vh] items-center justify-center rounded-card border border-outline bg-surface">
           <Spinner className="h-6 w-6 animate-spin text-primary" />
         </div>
-      ) : farmers.isError ? (
+      ) : summary.isError ? (
         <div className="rounded-card border border-outline bg-surface px-4 py-12 text-center">
           <Text variant="muted">Couldn&apos;t load your caseload.</Text>
           <div className="mt-3">
-            <Button size="sm" variant="secondary" onClick={() => farmers.refetch()}>
+            <Button size="sm" variant="secondary" onClick={() => summary.refetch()}>
               Retry
             </Button>
           </div>

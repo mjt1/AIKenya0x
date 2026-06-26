@@ -3,6 +3,7 @@ export const RECOMMENDATION_KINDS = [
   'first_visit',
   'issue_followup',
   'advice_followup',
+  'risk_alert',
 ] as const;
 
 export type RecommendationKind = (typeof RECOMMENDATION_KINDS)[number];

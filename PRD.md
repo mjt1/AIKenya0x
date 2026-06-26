@@ -7,7 +7,7 @@ _Suluhu — a farmer-intelligence copilot for extension agents. Scope: mixed **s
 
 ## Table of Contents
 1. Introduction — 1.1 Purpose · 1.2 Scope · 1.3 Definitions, Acronyms & Abbreviations
-2. Functional Requirements — 2.1 Agent (User) Features · 2.2 Admin / Cooperative Features · 2.3 AI/ML Algorithms · 2.4 Pages
+2. Functional Requirements — 2.1 Agent (User) Features · 2.2 Admin Features · 2.3 AI/ML Algorithms · 2.4 Pages
 3. User Stories (master list)
 4. Technical Requirements — 4.1 Front-End · 4.2 Back-End · 4.3 AI/ML Service · 4.4 Database (Neo4j graph model) · 4.5 Infrastructure · 4.6 Integration Strategy · 4.7 Data / Processing Flow
 5. Non-Functional Requirements & Success Metrics
@@ -48,12 +48,12 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
 ## 2.1 Agent (User) Features
 
 ### Feature 1 — Authentication & Agent Profile
-- **Description:** Secure agent login; profile scoping the agent to their county, cooperative and caseload.
+- **Description:** Secure agent login; profile scoping the agent to their county and caseload.
 - **User stories:** US-01, US-02
 - **Acceptance criteria:**
   - Agent can log in with credentials and receive a session token; unauthenticated requests are rejected.
   - On login, the app loads only the farmers assigned to that agent.
-  - Profile shows agent name, county (e.g., Kakamega), cooperative, and caseload size.
+  - Profile shows agent name, county (e.g., Kakamega), and caseload size.
 
 ### Feature 2 — Farmer & Enterprise Registry
 - **Description:** Register a farmer and the enterprise(s) they run (sugarcane, dairy, or both), plus assets (animals, plots/fields).
@@ -76,7 +76,7 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
 - **User stories:** US-07, US-08, US-09
 - **Acceptance criteria:**
   - The queue ranks the full caseload and surfaces the top priorities (default top 5) for the day.
-  - Each entry shows a rule-based reason (e.g., _"Dairy: milk yield down 18% over 3 days"_ or _"Sugarcane: top-dressing window closing in 4 days"_).
+  - Each entry shows a rule-based reason (e.g., _\"Dairy: milk yield down 18% over 3 days\"_ or _\"Sugarcane: top-dressing window closing in 4 days\"_).
   - Signals include yield/milk drops, biological-window deadlines, weather-driven risk, and **record staleness** (farmers not visited recently are not forgotten).
 
 ### Feature 5 — Farmer Detail & Tailored Recommendations
@@ -124,10 +124,9 @@ This document defines the product requirements for **Suluhu**, an AI-powered far
   - A **Pins ⇆ Heatmap** toggle switches between individual markers and a density layer weighted by score.
   - Tapping a marker opens that farmer's detail (Feature 5).
   - Contagious-issue clusters (e.g., the smut alert from Feature 9) are visually highlighted.
-  - A cooperative/supervisor variant aggregates across agents to show where attention is concentrated.
   - Farmers missing a GPS location are listed separately rather than dropped from the view.
 
-## 2.2 Admin / Cooperative Features
+## 2.2 Admin Features
 
 ### Feature 1 — Agent & Caseload Management
 - **User stories:** US-17
@@ -162,7 +161,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 
 **Authentication & profile**
 - **US-01** — As an agent, I want to log in securely, so my caseload and notes stay private.
-- **US-02** — As an agent, I want a profile scoped to my county/cooperative, so I only see my assigned farmers.
+- **US-02** — As an agent, I want a profile scoped to my county, so I only see my assigned farmers.
 
 **Registry**
 - **US-03** — As an agent, I want to register a farmer and the enterprises they run, so the system tracks the right things.
@@ -193,13 +192,13 @@ The AI service provides **stateless inference** only (it does not own the databa
 **Risk**
 - **US-16** — As an agent, I want alerts when a contagious issue is logged nearby, so I can contain spread.
 
-**Admin / cooperative**
+**Admin**
 - **US-17** — As an admin, I want to manage agents and caseload assignments, so coverage is organised.
 - **US-18** — As an admin, I want to manage the knowledge base, so advisory answers stay accurate and cited.
 - **US-19** — As an admin, I want analytics across agents, so I can see adoption and productivity.
 
 **Caseload map & visibility**
-- **US-20** — As an agent (and cooperative supervisor), I want to see my caseload on a map/heatmap coloured by priority, so I can plan an efficient route and spot urgency and disease clusters at a glance.
+- **US-20** — As an agent, I want to see my caseload on a map/heatmap coloured by priority, so I can plan an efficient route and spot urgency and disease clusters at a glance.
 
 ---
 
@@ -226,7 +225,7 @@ The AI service provides **stateless inference** only (it does not own the databa
 - **Why a graph:** a single farmer's dual-enterprise relationships (crop + livestock + assets + visits + neighbours) are heterogeneous and highly connected — awkward in fixed relational tables, natural in a graph; the same Cypher query scores any enterprise type.
 
 **Core node labels (key properties):**
-- `Agent` (id, name, county, cooperative)
+- `Agent` (id, name, county, role)
 - `Farmer` (id, name, gps, phone, lastVisitedAt)
 - `Enterprise` (id, type: `Dairy|Sugarcane`)
 - `Animal` (id, breed, lactationStage, lastBreedingDate) · `Field` (id, areaHa, variety, ratoonCycle, lastTopDressedAt)
@@ -245,6 +244,8 @@ The AI service provides **stateless inference** only (it does not own the databa
 (:Issue)-[:GROUNDED_IN]->(:ManualChunk)      // GraphRAG citation trail
 ```
 
+> **Prototype implementation status (as of 27 Jun 2026).** Implemented nodes: `Agent, Farmer, Enterprise, Animal, Field, Visit, Observation, Issue, ManualChunk, KnowledgeDocument, AdvisoryInquiry, Recommendation`. Implemented relationships: `MANAGES, RUNS, HAS_ASSET, HAD_VISIT, CAPTURED, FLAGS, HAS_RECOMMENDATION, ABOUT, ASKED, GROUNDED_IN` (the citation trail runs from `AdvisoryInquiry`, not `Issue`). Modelled but **not yet implemented**: `Action, Input, Zone, Weather` nodes and the `RECOMMENDS, NEEDS, IN, FORECAST_FOR, NEAR` relationships. Notes: tailored action + input (US-11) is currently delivered in the advisory response (`action_items` + `inputs_needed`) rather than persisted `Action`/`Input` nodes; risk propagation (US-16) uses gps proximity rather than materialised `NEAR` edges. Cooperatives and the supervisor role have been removed from scope — agent roles are now `agent | admin`.
+
 ## 4.5 Infrastructure
 - Neo4j AuraDB (managed). Backend and AI service each containerised and deployed to a simple host (e.g., Render/Railway/Fly) for the prototype. Frontend on Vercel. Secrets via environment variables; HTTPS throughout.
 
@@ -256,11 +257,11 @@ The AI service provides **stateless inference** only (it does not own the databa
 
 ## 4.7 Data / Processing Flow (end-to-end)
 1. **Capture:** agent submits a visit → Frontend → `POST /farmers/{id}/visits` (Backend).
-2. **Structure:** Backend calls AI `POST /structure-note` and `POST /classify` → writes `Visit/Observation/Issue` nodes to Neo4j.
-3. **Prioritise:** `GET /queue` runs the Cypher scoring across the caseload → returns a ranked list with reasons.
-4. **Tailor:** `GET /farmers/{id}/recommendations` composes action + input from the issue + rules.
-5. **Grounded Q&A:** `POST /advisory/ask` → Backend embeds the query (AI `/embed`), runs a Neo4j vector search for `ManualChunk`s + pulls the farmer subgraph → calls AI `/advisory` with that context → returns a cited answer.
-6. **Follow-up:** `POST /visits/{id}/outcome` updates the graph and the next score.
+2. **Structure:** Backend calls AI `POST /structure-note` → writes `Visit/Observation/Issue` nodes to Neo4j.
+3. **Prioritise:** `POST /recommendations/generate` runs the Cypher scoring across the caseload → returns a ranked list with reasons (`GET /recommendations` reads the current queue).
+4. **Tailor:** `POST /advisory/ask` composes the recommended action + inputs for the active issue (`action_items` + `inputs_needed`).
+5. **Grounded Q&A:** `POST /advisory/ask` → Backend embeds the query (AI `/embed`), runs a Neo4j vector search for `ManualChunk`s + pulls the farmer subgraph → calls AI `/advisory/ask` with that context → returns a cited answer.
+6. **Follow-up:** `PATCH /recommendations/{id}/status` (done / partly_done / not_done + note) updates the graph and the next score.
 
 ---
 

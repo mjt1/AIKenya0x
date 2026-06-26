@@ -53,6 +53,40 @@ export class FarmerListItemDto {
   lastVisitedAt!: string | null;
 }
 
+/** Most-severe open issue surfaced on the map tooltip. */
+export class MapTopIssueDto {
+  @ApiProperty() text!: string;
+  @ApiProperty({ nullable: true, type: String, enum: ['low', 'medium', 'high'] })
+  severity!: string | null;
+  @ApiProperty() contagious!: boolean;
+}
+
+/** Latest field observation surfaced on the map tooltip. */
+export class MapLatestObservationDto {
+  @ApiProperty({ enum: ['observation', 'issue', 'advice'] }) kind!: string;
+  @ApiProperty() text!: string;
+  @ApiProperty({ nullable: true, type: String, format: 'date-time' })
+  capturedAt!: string | null;
+}
+
+@ApiExtraModels(MapTopIssueDto, MapLatestObservationDto)
+export class FarmerMapSummaryDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() phone!: string;
+  @ApiProperty({ nullable: true, type: String, example: '-0.2827,34.7519' })
+  gps!: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'date-time' })
+  lastVisitedAt!: string | null;
+  @ApiProperty({ type: [String], example: ['Dairy', 'Sugarcane'] })
+  enterprises!: string[];
+  @ApiProperty() openIssueCount!: number;
+  @ApiProperty({ type: MapTopIssueDto, nullable: true })
+  topIssue!: MapTopIssueDto | null;
+  @ApiProperty({ type: MapLatestObservationDto, nullable: true })
+  latestObservation!: MapLatestObservationDto | null;
+}
+
 export class EnterpriseCreatedResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
 }

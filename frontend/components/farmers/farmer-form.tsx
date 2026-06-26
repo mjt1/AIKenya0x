@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import { Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnterpriseFieldset } from "@/components/farmers/enterprise-fieldset";
+import { LocationPicker } from "@/components/farmers/location-picker";
 import { newEnterprise, type EnterpriseDraft } from "@/components/farmers/draft";
 import { useCreateFarmer } from "@/hooks/mutations/use-create-farmer";
 import { ApiError } from "@/lib/api";
@@ -121,13 +122,8 @@ export function FarmerForm() {
             required
           />
         </div>
-        <Field
-          label="GPS (lat,lng)"
-          value={gps}
-          placeholder="0.2827,34.7519"
-          hint="Optional — enables the caseload map."
-          onChange={(e) => setGps(e.target.value)}
-        />
+
+        <LocationPicker value={gps} onChange={setGps} />
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">

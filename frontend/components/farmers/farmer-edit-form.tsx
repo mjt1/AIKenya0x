@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import { Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { LocationPicker } from "@/components/farmers/location-picker";
 import { useFarmer } from "@/hooks/queries/use-farmer";
 import { useUpdateFarmer } from "@/hooks/mutations/use-update-farmer";
 import { ApiError } from "@/lib/api";
@@ -113,13 +114,8 @@ export function FarmerEditForm({ farmerId }: { farmerId: string }) {
           onChange={(e) => setPhone(e.target.value)}
           required
         />
-        <Field
-          label="GPS (lat,lng)"
-          value={gps}
-          placeholder="0.2827,34.7519"
-          hint="Optional — enables the caseload map."
-          onChange={(e) => setGps(e.target.value)}
-        />
+
+        <LocationPicker value={gps} onChange={setGps} />
 
         <div className="flex gap-2">
           <Button type="submit" loading={update.isPending}>

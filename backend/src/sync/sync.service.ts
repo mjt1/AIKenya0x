@@ -184,7 +184,14 @@ export class SyncService {
 
     const provided = dto.observations ?? [];
     const structured =
-      provided.length > 0 ? provided : await this.ai.structureNote(dto.notes);
+      provided.length > 0
+        ? null
+        : await this.ai.structureNote({
+            rawNote: dto.notes,
+            farmerId: op.farmerId,
+          });
+    const observations = structured ? structured.observations : provided;
+    const issues = structured ? structured.issues : [];
 
     const outcome = await this.visitsRepo.createForAgent({
       agentId,
@@ -193,7 +200,8 @@ export class SyncService {
       date: dto.date,
       enterpriseIds: dto.enterpriseIds,
       notes: dto.notes,
-      observations: structured,
+      observations,
+      issues,
       clientUpdatedAt: op.clientUpdatedAt,
     });
     if (outcome.status === 'notfound')

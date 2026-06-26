@@ -24,9 +24,9 @@ from slowapi.errors import RateLimitExceeded
 from app.config import get_settings
 from app.dependencies import get_embedder  # pre-warm embedding model
 from app.models.responses import HealthResponse
-from app.routers import structure, classify, embed, advisory
+from app.routers import structure, classify, embed, advisory, rank
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# --- Logging -----------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
@@ -36,9 +36,25 @@ logger = logging.getLogger(__name__)
 cfg = get_settings()
 
 
-# ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
+# --- Lifespan (startup / shutdown) -------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Surface the LLM (Featherless) configuration up front so setup problems are
+    # obvious in the logs instead of only surfacing as request-time errors.
+    key_state = "set" if cfg.featherless_api_key else "MISSING"
+    logger.info(
+        "Featherless LLM config | api_key=%s | base_url=%s | chat_model=%s | advisory_model=%s",
+        key_state,
+        cfg.featherless_base_url,
+        cfg.featherless_chat_model,
+        cfg.featherless_advisory_model,
+    )
+    if not cfg.featherless_api_key:
+        logger.warning(
+            "FEATHERLESS_API_KEY is empty \u2014 note-structuring, advisory and ranking LLM "
+            "calls will fail; the backend falls back to deterministic behaviour."
+        )
+
     # Pre-warm the embedding model so the first /embed request is fast
     logger.info("Warming up embedding model...")
     try:
@@ -53,20 +69,20 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down %s.", cfg.app_name)
 
 
-# ── Rate limiter ──────────────────────────────────────────────────────────────
+# --- Rate limiter ------------------------------------------------------------
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{cfg.rate_limit_per_minute}/minute"])
 
 
-# ── App factory ───────────────────────────────────────────────────────────────
+# --- App factory -------------------------------------------------------------
 app = FastAPI(
     title=cfg.app_name,
     version=cfg.app_version,
     description=(
         "Stateless AI inference service for the Suluhu farmer-intelligence copilot. "
         "Provides note structuring, issue classification, dense embeddings, "
-        "and grounded GraphRAG advisory answers for dairy and sugarcane extension agents "
-        "in Western Kenya.\n\n"
-        "**This service is internal** — only the NestJS backend should call it. "
+        "grounded GraphRAG advisory answers, and bounded prioritisation re-ranking "
+        "for dairy and sugarcane extension agents in Western Kenya.\n\n"
+        "**This service is internal** \u2014 only the NestJS backend should call it. "
         "All Neo4j access lives in the backend; this service receives context payloads."
     ),
     contact={"name": "DigiCow Africa / Kenya AI Challenge", "email": "dev@digicow.africa"},
@@ -77,10 +93,10 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# ── Middleware ─────────────────────────────────────────────────────────────────
+# --- Middleware --------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # backend → service; restrict to backend host in production
+    allow_origins=["*"],   # backend -> service; restrict to backend host in production
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
@@ -89,7 +105,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-# ── Request timing middleware ─────────────────────────────────────────────────
+# --- Request timing middleware -----------------------------------------------
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start = time.perf_counter()
@@ -99,7 +115,7 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# ── Health check ──────────────────────────────────────────────────────────────
+# --- Health check ------------------------------------------------------------
 @app.get(
     "/health",
     response_model=HealthResponse,
@@ -125,8 +141,9 @@ async def root():
     )
 
 
-# ── Routers ───────────────────────────────────────────────────────────────────
+# --- Routers -----------------------------------------------------------------
 app.include_router(structure.router)
 app.include_router(classify.router)
 app.include_router(embed.router)
 app.include_router(advisory.router)
+app.include_router(rank.router)

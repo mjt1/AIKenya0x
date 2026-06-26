@@ -15,6 +15,7 @@ import { ReassignFarmerDto } from './dto/reassign-farmer.dto';
 import {
   EnterpriseCreatedResponseDto,
   FarmerListItemDto,
+  FarmerMapSummaryDto,
   FarmerResponseDto,
   ReassignFarmerResponseDto,
 } from './dto/responses/farmer.response.dto';
@@ -46,6 +47,17 @@ export class FarmersController {
   @ApiOkResponse({ type: FarmerListItemDto, isArray: true })
   list(@CurrentAgent() agent: AuthenticatedAgent) {
     return this.farmers.list(agent.id);
+  }
+
+  // NOTE: must be declared before `:id` so 'map' isn't captured as a farmer id.
+  @Get('map')
+  @ApiOperation({
+    summary:
+      'Caseload cards for the map tooltip: enterprise mix, recency, open issues, latest note.',
+  })
+  @ApiOkResponse({ type: FarmerMapSummaryDto, isArray: true })
+  mapSummary(@CurrentAgent() agent: AuthenticatedAgent) {
+    return this.farmers.mapSummary(agent.id);
   }
 
   @Get(':id')

@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { KnowledgeRepository } from '../repository/knowledge.repository';
-import { AiClientService } from '../ai-client/ai-client.service';
+import {
+  AiClientService,
+  toAiEnterprise,
+  type AiEnterpriseType,
+} from '../ai-client/ai-client.service';
 import type { AskAdvisoryDto } from './dto/ask-advisory.dto';
 import type { AuthenticatedAgent } from '../common/decorators/current-agent.decorator';
 import { Role } from '../common/types/rbac.types';
@@ -20,6 +24,16 @@ interface FarmerSubgraph {
   issues: Array<{ category: string; severity: string; status: string }>;
 }
 
+/**
+ * Neo4j temporal values (DateTime/Date) arrive as driver objects, not strings.
+ * The AI service's FarmerContext expects ISO strings, so coerce via toString().
+ */
+function toIsoString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  return String(value);
+}
+
 @Injectable()
 export class AdvisoryService {
   constructor(
@@ -33,6 +47,12 @@ export class AdvisoryService {
       ? await this.loadFarmerSubgraph(dto.farmerId, agent)
       : null;
 
+    const enterpriseType: AiEnterpriseType = dto.enterprise
+      ? toAiEnterprise(dto.enterprise)
+      : farmer && farmer.enterprises.length === 1
+        ? toAiEnterprise(farmer.enterprises[0])
+        : 'BOTH';
+
     const queryEmbedding = await this.ai.embed(dto.question);
     const hits = await this.kb.vectorSearch(
       queryEmbedding,
@@ -42,6 +62,7 @@ export class AdvisoryService {
 
     const answer = await this.ai.advisory({
       question: dto.question,
+      enterpriseType,
       contexts: hits.map((h) => ({
         id: h.id,
         text: h.text,
@@ -49,7 +70,18 @@ export class AdvisoryService {
         title: h.title ?? undefined,
         score: h.score,
       })),
-      farmerSummary: farmer ? this.summariseFarmer(farmer) : null,
+      farmerContext: farmer
+        ? {
+            farmerId: farmer.id,
+            farmerName: farmer.name,
+            enterpriseTypes: farmer.enterprises.map(toAiEnterprise),
+            lastVisitDate: farmer.lastVisitedAt,
+            recentIssues: farmer.issues,
+            recentAdvice: farmer.recentNotes
+              .filter((n) => n.kind === 'advice')
+              .map((n) => String(n.text)),
+          }
+        : null,
     });
 
     // Citation trail (F6 acceptance criterion):
@@ -67,7 +99,11 @@ export class AdvisoryService {
       inquiryId,
       question: dto.question,
       answer: answer.answer,
+      confidence: answer.confidence,
       deferred: answer.deferred,
+      referralReason: answer.referralReason,
+      actionItems: answer.actionItems,
+      inputsNeeded: answer.inputsNeeded,
       rationale: answer.rationale,
       citations: hits
         .filter((h) => answer.citations.some((c) => c.chunkId === h.id))
@@ -140,7 +176,9 @@ export class AdvisoryService {
       name: r.get('name') as string,
       gps: r.get('gps') as string | null,
       phone: r.get('phone') as string,
-      lastVisitedAt: r.get('lastVisitedAt') as string | null,
+      // f.lastVisitedAt is a Neo4j DateTime; the AI FarmerContext wants an ISO
+      // string (str | None), so coerce instead of leaking the temporal object.
+      lastVisitedAt: toIsoString(r.get('lastVisitedAt')),
       enterprises: (r.get('enterprises') as (string | null)[]).filter(Boolean) as string[],
       recentNotes: ((r.get('recentNotes') as Array<{ text: string; kind: string; date: unknown } | null>) ?? [])
         .filter((x): x is { text: string; kind: string; date: unknown } => !!x && !!x.text)
@@ -148,28 +186,5 @@ export class AdvisoryService {
       issues: ((r.get('issues') as Array<{ category: string; severity: string; status: string } | null>) ?? [])
         .filter((x): x is { category: string; severity: string; status: string } => !!x && !!x.category),
     };
-  }
-
-  private summariseFarmer(f: FarmerSubgraph): string {
-    const parts: string[] = [];
-    parts.push(`Farmer ${f.name} runs ${f.enterprises.join(' + ') || 'no recorded enterprises'}.`);
-    if (f.lastVisitedAt) parts.push(`Last visited ${f.lastVisitedAt}.`);
-    if (f.issues.length) {
-      parts.push(
-        `Open issues: ${f.issues
-          .slice(0, 3)
-          .map((i) => `${i.category} (${i.severity}, ${i.status})`)
-          .join('; ')}.`,
-      );
-    }
-    if (f.recentNotes.length) {
-      parts.push(
-        `Recent notes: ${f.recentNotes
-          .slice(0, 3)
-          .map((n) => `[${n.kind}] ${String(n.text).slice(0, 80)}`)
-          .join(' | ')}.`,
-      );
-    }
-    return parts.join(' ');
   }
 }
