@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { LocationPicker } from "@/components/farmers/location-picker";
+import { SensorsSection } from "@/components/farmers/sensors-section";
 import { useFarmer } from "@/hooks/queries/use-farmer";
 import { useUpdateFarmer } from "@/hooks/mutations/use-update-farmer";
 import { ApiError } from "@/lib/api";
@@ -130,6 +131,8 @@ export function FarmerEditForm({ farmerId }: { farmerId: string }) {
           </Button>
         </div>
       </form>
+
+      <SensorsSection farmerId={farmerId} />
     </div>
   );
 }

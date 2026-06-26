@@ -14,7 +14,11 @@ import type { AdvisoryAnswer } from "@/lib/types";
 
 type EnterpriseScope = "" | "dairy" | "sugarcane";
 
-export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) {
+export function AdvisoryChat({
+  initialFarmerId,
+}: {
+  initialFarmerId?: string;
+}) {
   const farmers = useFarmers();
   const ask = useAskAdvisory();
 
@@ -35,7 +39,8 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
     e.preventDefault();
     setError(null);
     const q = question.trim();
-    if (q.length < 3) return setError("Type a question (at least 3 characters).");
+    if (q.length < 3)
+      return setError("Type a question (at least 3 characters).");
     try {
       const res = await ask.mutateAsync({
         question: q,
@@ -58,7 +63,7 @@ export function AdvisoryChat({ initialFarmerId }: { initialFarmerId?: string }) 
   return (
     <div className="space-y-4">
       <header>
-        <Text variant="h1">Advisory</Text>
+        <Text variant="h1">Chat with Suluhu</Text>
         <Text variant="muted" className="mt-1">
           Ask a technical question — answers are grounded in the knowledge base
           and cite their sources.

@@ -3,14 +3,23 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { StatCard } from "@/components/stat-card";
 import { Spinner } from "@/components/ui/spinner";
 import { QueueRow } from "@/components/queue/queue-row";
 import { useMe } from "@/hooks/queries/use-me";
 import { useQueue } from "@/hooks/queries/use-queue";
 import { useGenerateQueue } from "@/hooks/mutations/use-generate-queue";
 import { priorityBand, type PriorityBand } from "@/lib/priority";
+import { cn } from "@/lib/utils";
 import { firstName, greeting } from "@/lib/format";
+
+const STATS: { band: PriorityBand; label: string; dot: string }[] = [
+  { band: "urgent", label: "Urgent", dot: "bg-danger" },
+  { band: "window", label: "Window", dot: "bg-warning" },
+  { band: "routine", label: "Routine", dot: "bg-success" },
+];
+
+const HEADER_GRID =
+  "md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_10rem] md:items-center md:gap-3";
 
 export function DailyQueue() {
   const router = useRouter();
@@ -19,11 +28,7 @@ export function DailyQueue() {
   const generate = useGenerateQueue();
 
   const recs = queue.data ?? [];
-  const counts: Record<PriorityBand, number> = {
-    urgent: 0,
-    window: 0,
-    routine: 0,
-  };
+  const counts: Record<PriorityBand, number> = { urgent: 0, window: 0, routine: 0 };
   for (const r of recs) counts[priorityBand(r.priority)] += 1;
 
   const name = me.data ? firstName(me.data.agent.name) : "";
@@ -31,21 +36,45 @@ export function DailyQueue() {
   const hasFarmers = caseloadSize > 0;
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Text variant="h1">
+    <div className="space-y-5">
+      {/* Mission bar */}
+      <div className="flex flex-wrap items-center gap-4 rounded-card bg-primary-dark px-5 py-4 text-white">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold">
             {greeting()}
             {name ? `, ${name}` : ""}.
-          </Text>
-          <Text variant="muted" className="mt-1">
+          </h2>
+          <p className="mt-0.5 text-sm text-white/60">
             {recs.length > 0
-              ? `${recs.length} farmer${recs.length === 1 ? "" : "s"} need your attention today.`
+              ? `${recs.length} farmer${recs.length === 1 ? "" : "s"} ranked by priority score`
               : hasFarmers
-                ? "Your priority visits for today."
-                : "Add a farmer to get started."}
-          </Text>
+                ? "Your priority visits for today"
+                : "Add a farmer to get started"}
+            {hasFarmers
+              ? ` \u00b7 ${caseloadSize} in caseload`
+              : ""}
+          </p>
         </div>
+
+        {recs.length > 0 ? (
+          <div className="flex items-center">
+            {STATS.map((s) => (
+              <div
+                key={s.band}
+                className="border-l border-white/10 px-4 text-center first:border-l-0"
+              >
+                <div className="text-xl font-bold tabular-nums">
+                  {counts[s.band]}
+                </div>
+                <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-white/55">
+                  <span className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {hasFarmers ? (
           <Button
             variant="secondary"
@@ -56,25 +85,39 @@ export function DailyQueue() {
             Regenerate
           </Button>
         ) : (
-          <Button size="sm" onClick={() => router.push("/farmers/new")}>
+          <Button size="sm" variant="secondary" onClick={() => router.push("/farmers/new")}>
             Add farmer
           </Button>
         )}
-      </header>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Urgent" value={counts.urgent} emphasis />
-        <StatCard label="Window closing" value={counts.window} />
-        <StatCard label="Routine" value={counts.routine} />
       </div>
 
-      <div className="rounded-card border border-outline bg-surface">
-        <div className="flex items-center justify-between border-b border-outline px-4 py-3">
-          <Text variant="h3">Priority queue</Text>
-          {queue.isFetching ? (
-            <Spinner className="h-4 w-4 animate-spin text-muted" />
-          ) : null}
+      {/* Priority queue panel */}
+      <div className="overflow-hidden rounded-card border border-outline bg-surface">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Text variant="h3">Today&apos;s Priority Queue</Text>
+          <div className="flex items-center gap-2 text-[11px] text-muted">
+            <span>Ranked by unified score</span>
+            {queue.isFetching ? (
+              <Spinner className="h-3.5 w-3.5 animate-spin text-muted" />
+            ) : null}
+          </div>
         </div>
+
+        {/* Column header (desktop) */}
+        {recs.length > 0 ? (
+          <div
+            className={cn(
+              "hidden border-b border-outline px-4 py-2 text-[11px] font-medium text-muted",
+              HEADER_GRID,
+            )}
+          >
+            <div>#</div>
+            <div>Farmer &middot; Reason</div>
+            <div>Type</div>
+            <div>Score</div>
+            <div className="md:text-right">Risk &middot; Action</div>
+          </div>
+        ) : null}
 
         {queue.isPending ? (
           <div className="px-4 py-12 text-center">
@@ -120,11 +163,25 @@ export function DailyQueue() {
             </div>
           )
         ) : (
-          <div>
-            {recs.map((rec, i) => (
-              <QueueRow key={rec.id} rec={rec} rank={i + 1} />
-            ))}
-          </div>
+          <>
+            <div>
+              {recs.map((rec, i) => (
+                <QueueRow key={rec.id} rec={rec} rank={i + 1} />
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-outline bg-surface-muted px-4 py-2 text-[11px] text-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-3 rounded-full bg-danger" /> Urgent (75+)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-3 rounded-full bg-warning" /> Window (45-74)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-3 rounded-full bg-success" /> Routine (below 45)
+              </span>
+              <span className="ml-auto">Score 0-100 &middot; higher = more urgent</span>
+            </div>
+          </>
         )}
       </div>
     </div>

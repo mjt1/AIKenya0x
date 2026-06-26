@@ -13,6 +13,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { AdminModule } from './admin/admin.module';
 import { AdvisoryModule } from './advisory/advisory.module';
+import { SensorsModule } from './sensors/sensors.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HealthController } from './health/health.controller';
@@ -32,6 +33,7 @@ import { HealthController } from './health/health.controller';
     RecommendationsModule,
     AdminModule,
     AdvisoryModule,
+    SensorsModule,
   ],
   controllers: [HealthController],
   providers: [

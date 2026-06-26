@@ -6,6 +6,7 @@ import { VisitsRepository } from './visits.repository';
 import { SyncRepository } from './sync.repository';
 import { AnalyticsRepository } from './analytics.repository';
 import { RecommendationsRepository } from './recommendations.repository';
+import { SensorsRepository } from './sensors.repository';
 
 @Global()
 @Module({
@@ -17,6 +18,7 @@ import { RecommendationsRepository } from './recommendations.repository';
     SyncRepository,
     AnalyticsRepository,
     RecommendationsRepository,
+    SensorsRepository,
   ],
   exports: [
     AgentsRepository,
@@ -25,6 +27,7 @@ import { RecommendationsRepository } from './recommendations.repository';
     SyncRepository,
     AnalyticsRepository,
     RecommendationsRepository,
+    SensorsRepository,
   ],
 })
 export class RepositoryModule {}

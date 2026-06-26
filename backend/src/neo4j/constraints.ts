@@ -10,6 +10,8 @@ export const CONSTRAINTS: string[] = [
   'CREATE CONSTRAINT observation_id_unique IF NOT EXISTS FOR (o:Observation) REQUIRE o.id IS UNIQUE',
   'CREATE CONSTRAINT sync_op_id_unique IF NOT EXISTS FOR (s:SyncOp) REQUIRE s.id IS UNIQUE',
   'CREATE CONSTRAINT recommendation_id_unique IF NOT EXISTS FOR (r:Recommendation) REQUIRE r.id IS UNIQUE',
+  'CREATE CONSTRAINT sensor_id_unique IF NOT EXISTS FOR (s:Sensor) REQUIRE s.id IS UNIQUE',
+  'CREATE CONSTRAINT reading_id_unique IF NOT EXISTS FOR (r:Reading) REQUIRE r.id IS UNIQUE',
   'CREATE INDEX agent_role IF NOT EXISTS FOR (a:Agent) ON (a.role)',
   'CREATE INDEX farmer_updated_at IF NOT EXISTS FOR (f:Farmer) ON (f.updatedAt)',
   'CREATE INDEX enterprise_updated_at IF NOT EXISTS FOR (e:Enterprise) ON (e.updatedAt)',
@@ -17,4 +19,7 @@ export const CONSTRAINTS: string[] = [
   'CREATE INDEX observation_updated_at IF NOT EXISTS FOR (o:Observation) ON (o.updatedAt)',
   'CREATE INDEX recommendation_status IF NOT EXISTS FOR (r:Recommendation) ON (r.status)',
   'CREATE INDEX recommendation_dedupe IF NOT EXISTS FOR (r:Recommendation) ON (r.dedupeKey)',
+  // Sensor token lookup is the hot path on every webhook call.
+  'CREATE INDEX sensor_token_hash IF NOT EXISTS FOR (s:Sensor) ON (s.tokenHash)',
+  'CREATE INDEX reading_ts IF NOT EXISTS FOR (r:Reading) ON (r.ts)',
 ];
