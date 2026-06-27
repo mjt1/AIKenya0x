@@ -45,6 +45,6 @@ COPY --from=builder /app/public ./public
 RUN chown -R suluhu:suluhu /app
 USER suluhu
 
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["node", "server.js"]
