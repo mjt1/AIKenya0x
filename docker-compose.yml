@@ -20,9 +20,6 @@ services:
     networks:
       - suluhu
 
-  # --- AI Service (FastAPI / Python) ------------------------------------------
-  # The embedding model is baked into the image (see ai/Dockerfile), so no cache
-  # volume or runtime download is needed.
   ai:
     build:
       context: ./ai
